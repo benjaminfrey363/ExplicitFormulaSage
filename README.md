@@ -28,10 +28,19 @@ tests/                 Basic tests
 docs/                  Project notes and task planning
 ```
 
-## Dependencies:
+## Setting up odlyzko-zeta:
 
 To install database of zeta zeros, on mac/linux use:
 
 ```bash
 sage -pip install passagemath-database-odlyzko-zeta
+```
+
+I also had to symlink the installed binary:
+
+```bash
+mkdir -p "$HOME/Library/Application Support/odlyzko"
+ln -s \
+  "$HOME/Library/SageMath-10-9/lib/python3.14/site-packages/sage_wheels/share/odlyzko/zeros.sobj" \
+  "$HOME/Library/Application Support/odlyzko/zeros.sobj"
 ```
