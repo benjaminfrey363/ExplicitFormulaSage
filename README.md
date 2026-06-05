@@ -4,9 +4,7 @@ This repository contains SageMath experiments related to explicit prime-counting
 
 The project is motivated by explicit estimates for the Chebyshev function
 
-\[
-\psi(x)=\sum_{p^k\le x}\log p,
-\]
+$psi(x)=\sum_{p^k\le x}\log p,$
 
 and by the use of explicit formulae, partial verification of the Riemann Hypothesis, zero-density estimates, and zero-free regions.
 
@@ -15,7 +13,7 @@ and by the use of explicit formulae, partial verification of the Riemann Hypothe
 The main goals for Sage Days are:
 
 1. Implement or identify existing SageMath functionality for computing Chebyshev functions.
-2. Build small tools for experimenting with truncated explicit formulae for \(\psi(x)\).
+2. Build small tools for experimenting with truncated explicit formulae for $\psi(x)$.
 3. Use available zeta-zero data in SageMath where possible.
 4. Visualize the effect of including more zeros in the explicit formula.
 5. Explore how partial RH verification, zero-density estimates, and zero-free regions might be represented computationally.
