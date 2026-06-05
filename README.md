@@ -27,3 +27,11 @@ examples/              Small Sage scripts demonstrating functionality
 tests/                 Basic tests
 docs/                  Project notes and task planning
 ```
+
+## Dependencies:
+
+To install database of zeta zeros, on mac/linux use:
+
+```bash
+sage -pip install passagemath-database-odlyzko-zeta
+```
