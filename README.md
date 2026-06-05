@@ -4,7 +4,7 @@ This repository contains SageMath experiments related to explicit prime-counting
 
 The project is motivated by explicit estimates for the Chebyshev function
 
-$psi(x)=\sum_{p^k\le x}\log p,$
+$\psi(x)=\sum_{p^k\le x}\log p,$
 
 and by the use of explicit formulae, partial verification of the Riemann Hypothesis, zero-density estimates, and zero-free regions.
 
