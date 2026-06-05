@@ -44,3 +44,5 @@ ln -s \
   "$HOME/Library/SageMath-10-9/lib/python3.14/site-packages/sage_wheels/share/odlyzko/zeros.sobj" \
   "$HOME/Library/Application Support/odlyzko/zeros.sobj"
 ```
+
+Will check install for Windows.

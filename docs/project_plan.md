@@ -32,56 +32,19 @@ The goal of this project is to build computational tools for experimenting with 
 
 ## Week goals
 
-### Minimum viable goal
+### 1
 
 - Compute \(\psi(x)\) and \(\vartheta(x)\) exactly for moderate \(x\).
 - Add examples and tests.
 
-### Main goal
+### 2
 
 - Implement a truncated explicit formula for \(\psi(x)\).
 - Compare exact values against approximations using finitely many zeta zeros.
 
-### Stretch goals
+### 3
 
 - Visualize error terms.
 - Investigate Sage's built-in zeta-zero functionality.
 - Add basic zero-free-region and zero-density estimate visualizations.
 
-## Task ideas
-
-### Task 1: Chebyshev functions
-
-Implement:
-
-- `von_mangoldt(n)`
-- `chebyshev_psi(x)`
-- `chebyshev_theta(x)`
-
-### Task 2: Zeta zeros
-
-Investigate existing Sage functionality for accessing zeta zeros.
-
-Possible goals:
-
-- wrapper for first `n` zeros,
-- wrapper for zeros up to height `T`,
-- documentation of installation requirements.
-
-### Task 3: Explicit formula
-
-Implement a function approximating
-
-\[
-x-\sum_{|\gamma|\le T}\frac{x^\rho}{\rho}
--\log(2\pi)
--\frac{1}{2}\log(1-x^{-2}).
-\]
-
-### Task 4: Plotting
-
-Add plots comparing:
-
-- \(\psi(x)\) and \(x\),
-- \(\psi(x)-x\),
-- exact \(\psi(x)\) versus explicit-formula approximations.

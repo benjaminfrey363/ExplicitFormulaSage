@@ -1,5 +1,5 @@
 """
-Chebyshev prime-counting functions.
+chebyshev.py
 
 Basic implementations of the von Mangoldt function,
 the Chebyshev psi function, and the Chebyshev theta function.
@@ -15,8 +15,7 @@ def von_mangoldt(n):
     Lambda(n) = log(p) if n = p^k for some prime p and k >= 1,
     and 0 otherwise.
 
-    This implementation expects Sage's `factor` function to be available
-    if run inside SageMath.
+    Must be run in SageMath environment, uses the sage `factor` function
     """
     if n < 1:
         raise ValueError("n must be a positive integer")
@@ -35,17 +34,10 @@ def von_mangoldt(n):
 
 def chebyshev_psi(x):
     """
-    Compute psi(x) = sum_{n <= x} Lambda(n).
+    Compute psi(x) = sum_{n <= x} Lambda(n),
+    for x: real or integer upper bound
 
-    Parameters
-    ----------
-    x : real or integer
-        Upper bound.
-
-    Returns
-    -------
-    float
-        The value of psi(x).
+    Must be run in SageMath environment, uses the sage `floor` function
     """
     if x < 1:
         return 0
@@ -55,17 +47,10 @@ def chebyshev_psi(x):
 
 def chebyshev_theta(x):
     """
-    Compute theta(x) = sum_{p <= x} log(p).
+    Compute theta(x) = sum_{p <= x} log(p),
+    for x: real or integer upper bound
 
-    Parameters
-    ----------
-    x : real or integer
-        Upper bound.
-
-    Returns
-    -------
-    float
-        The value of theta(x).
+    Must be run in SageMath environment, uses sage `primes` and `floor` functions
     """
     if x < 2:
         return 0
