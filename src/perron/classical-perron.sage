@@ -4,32 +4,47 @@ PerronsFormula.sage
 Exploratory Sage script studying Perron's formula, working toward
 implementing Chirre's Perron-type formula.
 
-Classical Perron's formula says roughly that if
-
-    F(s) = sum_{n >= 1} a_n / n^s,
-
-then for c > abscissa of convergence,
+The classical Perron formula has the shape
 
     sum_{n <= x} a_n
     approx
-    (1 / 2 pi i) int_{c - iT}^{c + iT} F(s) x^s / s ds.
+    (1 / 2 pi i) int_{c-iT}^{c+iT} F(s) x^s / s ds,
 
-After parametrizing s = c + it, this becomes
+where
 
-    (1 / 2 pi) int_{-T}^{T} F(c + it) x^(c+it)/(c+it) dt.
+    F(s) = sum_{n >= 1} a_n / n^s.
+
+More generally, Perron-type formulae replace the classical kernel 1/s
+with another kernel K(s), giving an integral of the form
+
+    (1 / 2 pi i) int_{c-iT}^{c+iT} F(s) x^s K(s) ds.
+
+Classical Perron is recovered by choosing
+
+    K(s) = 1/s.
 """
 
 
-def perron_integral(F, x, c=2, T=50):
-    """
-    Numerically compute the truncated Perron integral
+# ============================================================
+# General Perron-type integral
+# ============================================================
 
-        (1 / 2 pi i) int_{c-iT}^{c+iT} F(s) x^s / s ds.
+def perron_type_integral(F, K, x, c=2, T=50):
+    """
+    Numerically compute the truncated Perron-type integral
+
+        (1 / 2 pi i) int_{c-iT}^{c+iT} F(s) x^s K(s) ds.
+
+    Parametrizing s = c + it gives
+
+        (1 / 2 pi) int_{-T}^{T} F(c+it) x^(c+it) K(c+it) dt.
 
     Parameters
     ----------
     F : function
-        Function of a complex variable s.
+        Function of a complex variable s. Usually a Dirichlet series.
+    K : function
+        Kernel function of a complex variable s.
     x : real
         Cutoff parameter.
     c : real
@@ -40,11 +55,11 @@ def perron_integral(F, x, c=2, T=50):
     Returns
     -------
     complex
-        Numerical approximation to the Perron integral.
+        Numerical approximation to the Perron-type integral.
     """
     def integrand(t):
         s = c + I*t
-        return F(s) * x**s / s
+        return F(s) * x**s * K(s)
 
     real_part = numerical_integral(lambda t: real(integrand(t)), -T, T)[0]
     imag_part = numerical_integral(lambda t: imag(integrand(t)), -T, T)[0]
@@ -52,26 +67,70 @@ def perron_integral(F, x, c=2, T=50):
     return (real_part + I*imag_part) / (2*pi)
 
 
+# ============================================================
+# Classical Perron kernel
+# ============================================================
+
+def K_classical(s):
+    """
+    Classical Perron kernel.
+
+    This corresponds to the sharp cutoff sum
+
+        sum_{n <= x} a_n.
+    """
+    return 1/s
+
+
+def perron_integral(F, x, c=2, T=50):
+    """
+    Classical Perron integral.
+
+    This is the special case of perron_type_integral with K(s) = 1/s.
+    """
+    return perron_type_integral(F, K_classical, x=x, c=c, T=T)
+
+
+# ============================================================
+# Example 1: F(s) = zeta(s)
+# ============================================================
+
 def F_zeta(s):
     """
     Dirichlet series F(s) = zeta(s).
 
-    The coefficients are a_n = 1, so Perron's formula should recover
-    approximately floor(x).
+    Since
+
+        zeta(s) = sum_{n >= 1} 1/n^s,
+
+    the coefficients are a_n = 1. Therefore classical Perron's formula
+    should recover approximately
+
+        sum_{n <= x} 1 = floor(x).
     """
     return zeta(s)
 
 
+def exact_sum_for_zeta(x):
+    """
+    Exact target value for F(s) = zeta(s).
+
+    Since a_n = 1, the exact sum is floor(x).
+    """
+    return floor(x)
+
+
 def test_zeta_perron(x=25.7, c=2, T_values=[5, 10, 20, 50, 100]):
     """
-    Test Perron's formula with F(s) = zeta(s).
-
-    Since zeta(s) = sum 1/n^s, the target value is floor(x).
+    Test classical Perron's formula with F(s) = zeta(s).
     """
-    exact = floor(x)
+    exact = exact_sum_for_zeta(x)
 
-    print(f"Testing Perron's formula for F(s) = zeta(s)")
+    print("=" * 70)
+    print("Classical Perron test: F(s) = zeta(s)")
+    print("=" * 70)
     print(f"x = {x}")
+    print(f"c = {c}")
     print(f"Exact floor(x) = {exact}")
     print()
 
@@ -86,5 +145,91 @@ def test_zeta_perron(x=25.7, c=2, T_values=[5, 10, 20, 50, 100]):
         print()
 
 
-# Run demo if this file is executed directly by Sage.
+# ============================================================
+# Example 2: Partial sums away from integers
+# ============================================================
+
+def test_zeta_perron_at_multiple_x(c=2, T=50):
+    """
+    Test Perron's formula for several x-values.
+
+    Perron's formula has jump behavior near integers. It tends to behave
+    more cleanly when x is not an integer.
+    """
+    x_values = [5.5, 10.3, 25.7, 50.2, 100.8]
+
+    print("=" * 70)
+    print("Classical Perron test for several x-values")
+    print("=" * 70)
+    print(f"c = {c}")
+    print(f"T = {T}")
+    print()
+
+    for x in x_values:
+        exact = exact_sum_for_zeta(x)
+        approx = perron_integral(F_zeta, x=x, c=c, T=T)
+
+        print(f"x = {x}")
+        print(f"  exact floor(x) = {exact}")
+        print(f"  approximation  = {N(real(approx))}")
+        print(f"  error          = {N(real(approx) - exact)}")
+        print(f"  imaginary      = {N(imag(approx))}")
+        print()
+
+
+# ============================================================
+# Example 3: Visualizing convergence in T
+# ============================================================
+
+def convergence_data_for_zeta(x=25.7, c=2, T_values=None):
+    """
+    Return numerical convergence data for F(s) = zeta(s).
+
+    This is useful before plotting. Each entry is a dictionary containing
+    T, approximation, exact value, and error.
+    """
+    if T_values is None:
+        T_values = [5, 10, 15, 20, 30, 40, 50, 75, 100]
+
+    exact = exact_sum_for_zeta(x)
+    rows = []
+
+    for T in T_values:
+        approx = perron_integral(F_zeta, x=x, c=c, T=T)
+        rows.append({
+            "T": T,
+            "approx": real(approx),
+            "imaginary": imag(approx),
+            "exact": exact,
+            "error": real(approx) - exact,
+        })
+
+    return rows
+
+
+def print_convergence_table_for_zeta(x=25.7, c=2, T_values=None):
+    """
+    Print a simple convergence table as T increases.
+    """
+    rows = convergence_data_for_zeta(x=x, c=c, T_values=T_values)
+
+    print("=" * 70)
+    print("Convergence table for F(s) = zeta(s)")
+    print("=" * 70)
+    print(f"x = {x}")
+    print(f"c = {c}")
+    print()
+    print("T        approximation        error")
+    print("-" * 70)
+
+    for row in rows:
+        print(f"{row['T']:<8} {N(row['approx']):<20} {N(row['error'])}")
+
+
+# ============================================================
+# Main script
+# ============================================================
+
 test_zeta_perron()
+test_zeta_perron_at_multiple_x()
+print_convergence_table_for_zeta()
