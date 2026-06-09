@@ -63,6 +63,29 @@ def test_chirre_regularized_zeta_shift_minus():
     print_chirre_regularized_contour_shift_result(result)
 
 
-test_basic_zeta_contour_shift()
-test_chirre_regularized_zeta_shift_plus()
-test_chirre_regularized_zeta_shift_minus()
+def test_chirre_pieces_regularized_zeta_plus():
+    result = contour_shift_chirre_pieces_regularized_zeta(
+        x=25.7,
+        sigma=0,
+        T=20,
+        alpha=0.5,
+        side="plus",
+    )
+    print_chirre_pieces_contour_shift_result(result)
+
+
+def test_chirre_pieces_regularized_zeta_minus():
+    result = contour_shift_chirre_pieces_regularized_zeta(
+        x=25.7,
+        sigma=0,
+        T=20,
+        alpha=0.5,
+        side="minus",
+    )
+    print_chirre_pieces_contour_shift_result(result)
+
+
+
+
+test_chirre_pieces_regularized_zeta_plus()
+test_chirre_pieces_regularized_zeta_minus()

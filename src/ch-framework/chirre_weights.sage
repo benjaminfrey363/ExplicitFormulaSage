@@ -418,3 +418,45 @@ def chirre_weight_inequality_grid(lam, y_values):
         "worst_lower_violation": worst_lower_violation,
         "worst_upper_violation": worst_upper_violation,
     }
+
+
+def chirre_Phi_circ_lambda(z, lam, side):
+    """
+    Analytic/meromorphic circ piece for contour shifting.
+
+    This is the lambda-version of Phi^{side,circ}_{|lambda|}.
+    No support cutoff is applied.
+    """
+    if lam == 0:
+        raise ValueError("lambda must be nonzero")
+
+    validate_side(side)
+
+    nu = abs(lam)
+    return Phi_circ(nu, real_sign(lam)*z, side)
+
+
+def chirre_Phi_star_lambda(z, lam, side):
+    """
+    Analytic/meromorphic star piece for contour shifting.
+
+    This is the lambda-version of Phi^{side,star}_{|lambda|}.
+    No support cutoff is applied.
+    """
+    if lam == 0:
+        raise ValueError("lambda must be nonzero")
+
+    validate_side(side)
+
+    nu = abs(lam)
+    return Phi_star(nu, real_sign(lam)*z, side)
+
+
+def chirre_phi_lambda_real(t, lam, side):
+    """
+    Real-line compactly supported Chirre weight.
+
+    Use this for Fourier-transform and majorant/minorant tests.
+    Do not use this for contour shifting.
+    """
+    return chirre_phi_lambda(t, lam, side)

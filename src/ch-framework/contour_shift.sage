@@ -409,6 +409,343 @@ def chirre_bottom_horizontal_integral(G, alpha, T):
     return real_part + I*imag_part
 
 
+
+def make_chirre_regularized_integrand_pieces(F_regular, x, sigma, T, side):
+    """
+    Return G_circ and G_star such that on the original vertical segment
+
+        G(s) = G_circ(s) + sgn(Im(s)) G_star(s).
+
+    This mirrors Chirre--Helfgott's contour-shift setup.
+    """
+    lam = chirre_lambda(sigma, T)
+
+    def G_circ(s):
+        z = (s - 1) / (I*T)
+        return chirre_Phi_circ_lambda(z, lam, side) * F_regular(s) * x**s
+
+    def G_star(s):
+        z = (s - 1) / (I*T)
+        return chirre_Phi_star_lambda(z, lam, side) * F_regular(s) * x**s
+
+    return G_circ, G_star
+
+
+
+
+# ============================================================
+# Chirre-style contour shift using circ/star pieces
+# ============================================================
+
+def chirre_original_vertical_integral_from_pieces(G_circ, G_star, T):
+    """
+    Compute the original Chirre vertical integral using the decomposition
+
+        G(s) = G_circ(s) + sgn(Im(s)) G_star(s)
+
+    on the segment s = 1 + it, -T <= t <= T.
+
+    Thus, for t > 0 we use G_circ + G_star, and for t < 0 we use
+    G_circ - G_star.
+
+    We split the integral at t = 0 because of the sign change.
+    """
+    def integrand_lower(t):
+        s = 1 + I*t
+        return (G_circ(s) - G_star(s)) * I
+
+    def integrand_upper(t):
+        s = 1 + I*t
+        return (G_circ(s) + G_star(s)) * I
+
+    real_lower = numerical_integral(lambda t: real(integrand_lower(t)), -T, 0)[0]
+    imag_lower = numerical_integral(lambda t: imag(integrand_lower(t)), -T, 0)[0]
+
+    real_upper = numerical_integral(lambda t: real(integrand_upper(t)), 0, T)[0]
+    imag_upper = numerical_integral(lambda t: imag(integrand_upper(t)), 0, T)[0]
+
+    return (real_lower + real_upper) + I*(imag_lower + imag_upper)
+
+
+def chirre_circ_rectangle_integrals(G_circ, alpha, T):
+    """
+    Compute the rectangle contour pieces for G_circ.
+
+    G_circ is meromorphic/holomorphic in the rectangle, so this behaves
+    like an ordinary contour-shift term.
+    """
+    right = chirre_right_vertical_integral(G_circ, T)
+    top = chirre_top_horizontal_integral(G_circ, alpha, T)
+    left_down = chirre_left_vertical_integral_down(G_circ, alpha, T)
+    bottom = chirre_bottom_horizontal_integral(G_circ, alpha, T)
+
+    return {
+        "right": right,
+        "top": top,
+        "left_down": left_down,
+        "bottom": bottom,
+        "rectangle": right + top + left_down + bottom,
+    }
+
+
+def chirre_star_upper_rectangle_integrals(G_star, alpha, T):
+    """
+    Compute the upper-half rectangle pieces for G_star.
+
+    This rectangle has vertices:
+
+        1,
+        1 + iT,
+        alpha + iT,
+        alpha.
+
+    Orientation:
+        right vertical upward from 1 to 1+iT,
+        top right-to-left,
+        left vertical downward from alpha+iT to alpha,
+        seam along real axis from alpha to 1.
+
+    The seam term is important: it is part of the contour boundary.
+    """
+    # right vertical: s = 1 + it, 0 <= t <= T
+    def right_integrand(t):
+        s = 1 + I*t
+        return G_star(s) * I
+
+    right_real = numerical_integral(lambda t: real(right_integrand(t)), 0, T)[0]
+    right_imag = numerical_integral(lambda t: imag(right_integrand(t)), 0, T)[0]
+    right = right_real + I*right_imag
+
+    # top: s = u + iT, 1 >= u >= alpha
+    top = chirre_top_horizontal_integral(G_star, alpha, T)
+
+    # left vertical down: s = alpha + it, T >= t >= 0
+    def left_integrand(t):
+        s = alpha + I*t
+        return G_star(s) * I
+
+    left_real = numerical_integral(lambda t: real(left_integrand(t)), T, 0)[0]
+    left_imag = numerical_integral(lambda t: imag(left_integrand(t)), T, 0)[0]
+    left_down = left_real + I*left_imag
+
+    # seam: s = u, alpha <= u <= 1
+    def seam_integrand(u):
+        s = u
+        return G_star(s)
+
+    seam_real = numerical_integral(lambda u: real(seam_integrand(u)), alpha, 1)[0]
+    seam_imag = numerical_integral(lambda u: imag(seam_integrand(u)), alpha, 1)[0]
+    seam = seam_real + I*seam_imag
+
+    return {
+        "right": right,
+        "top": top,
+        "left_down": left_down,
+        "seam": seam,
+        "rectangle": right + top + left_down + seam,
+    }
+
+
+def chirre_star_lower_rectangle_integrals(G_star, alpha, T):
+    """
+    Compute the lower-half rectangle pieces for G_star.
+
+    This rectangle has vertices:
+
+        1,
+        alpha,
+        alpha - iT,
+        1 - iT.
+
+    Orientation is chosen so that the right vertical piece is upward
+    from 1-iT to 1, matching the original vertical orientation.
+
+    Boundary pieces:
+        right vertical upward from 1-iT to 1,
+        seam along real axis from 1 to alpha,
+        left vertical downward from alpha to alpha-iT,
+        bottom from alpha-iT to 1-iT.
+    """
+    # right vertical: s = 1 + it, -T <= t <= 0
+    def right_integrand(t):
+        s = 1 + I*t
+        return G_star(s) * I
+
+    right_real = numerical_integral(lambda t: real(right_integrand(t)), -T, 0)[0]
+    right_imag = numerical_integral(lambda t: imag(right_integrand(t)), -T, 0)[0]
+    right = right_real + I*right_imag
+
+    # seam: s = u, 1 >= u >= alpha
+    def seam_integrand(u):
+        s = u
+        return G_star(s)
+
+    seam_real = numerical_integral(lambda u: real(seam_integrand(u)), 1, alpha)[0]
+    seam_imag = numerical_integral(lambda u: imag(seam_integrand(u)), 1, alpha)[0]
+    seam = seam_real + I*seam_imag
+
+    # left vertical down: s = alpha + it, 0 >= t >= -T
+    def left_integrand(t):
+        s = alpha + I*t
+        return G_star(s) * I
+
+    left_real = numerical_integral(lambda t: real(left_integrand(t)), 0, -T)[0]
+    left_imag = numerical_integral(lambda t: imag(left_integrand(t)), 0, -T)[0]
+    left_down = left_real + I*left_imag
+
+    # bottom: s = u - iT, alpha <= u <= 1
+    bottom = chirre_bottom_horizontal_integral(G_star, alpha, T)
+
+    return {
+        "right": right,
+        "seam": seam,
+        "left_down": left_down,
+        "bottom": bottom,
+        "rectangle": right + seam + left_down + bottom,
+    }
+
+
+def contour_shift_chirre_pieces_regularized_zeta(
+    x,
+    sigma=0,
+    T=20,
+    alpha=0.5,
+    side="plus",
+):
+    """
+    Numerically test the Chirre-style contour shift using the decomposition
+
+        G = G_circ + sgn(Im s) G_star.
+
+    We use
+
+        F(s) = zeta(s) - 1/(s - 1),
+
+    so there should be no pole contribution in the rectangle.
+
+    This test checks three things:
+
+    1. G_circ rectangle integral is approximately 0.
+    2. G_star upper and lower rectangle integrals are approximately 0.
+    3. The original vertical integral reconstructed from the pieces agrees
+       with the shifted expression including seam terms.
+    """
+    if not (alpha < 1):
+        raise ValueError("Need alpha < 1.")
+
+    if T <= 0:
+        raise ValueError("Need T > 0.")
+
+    G_circ, G_star = make_chirre_regularized_integrand_pieces(
+        F_regular=zeta_regularized_for_contour,
+        x=x,
+        sigma=sigma,
+        T=T,
+        side=side,
+    )
+
+    original = chirre_original_vertical_integral_from_pieces(G_circ, G_star, T)
+
+    circ = chirre_circ_rectangle_integrals(G_circ, alpha, T)
+    star_upper = chirre_star_upper_rectangle_integrals(G_star, alpha, T)
+    star_lower = chirre_star_lower_rectangle_integrals(G_star, alpha, T)
+
+    # For the circ piece:
+    #   right + top + left_down + bottom = 0
+    # so
+    #   right = -top - left_down - bottom.
+    circ_shifted_right = -circ["top"] - circ["left_down"] - circ["bottom"]
+
+    # For the star upper piece:
+    #   right + top + left_down + seam = 0
+    # so
+    #   right = -top - left_down - seam.
+    star_upper_shifted_right = (
+        -star_upper["top"]
+        -star_upper["left_down"]
+        -star_upper["seam"]
+    )
+
+    # For the star lower piece:
+    #   right + seam + left_down + bottom = 0
+    # so
+    #   right = -seam - left_down - bottom.
+    star_lower_shifted_right = (
+        -star_lower["seam"]
+        -star_lower["left_down"]
+        -star_lower["bottom"]
+    )
+
+    # Original vertical is:
+    #
+    #   circ right over full segment
+    #   + star upper right
+    #   - star lower right
+    #
+    # because on the lower half the original integrand is G_circ - G_star.
+    shifted = (
+        circ_shifted_right
+        + star_upper_shifted_right
+        - star_lower_shifted_right
+    )
+
+    return {
+        "x": x,
+        "sigma": sigma,
+        "T": T,
+        "alpha": alpha,
+        "side": side,
+        "original": original,
+        "shifted": shifted,
+        "shift_error": original - shifted,
+        "circ_rectangle": circ["rectangle"],
+        "star_upper_rectangle": star_upper["rectangle"],
+        "star_lower_rectangle": star_lower["rectangle"],
+        "circ": circ,
+        "star_upper": star_upper,
+        "star_lower": star_lower,
+        "original_normalized": original / (I*T),
+        "shifted_normalized": shifted / (I*T),
+        "shift_error_normalized": (original - shifted) / (I*T),
+    }
+
+
+def print_chirre_pieces_contour_shift_result(result):
+    """
+    Pretty-print the circ/star Chirre contour-shift diagnostic.
+    """
+    print("=" * 70)
+    print("Chirre circ/star contour shift: regularized zeta")
+    print("=" * 70)
+    print(f"x = {result['x']}")
+    print(f"sigma = {result['sigma']}")
+    print(f"T = {result['T']}")
+    print(f"alpha = {result['alpha']}")
+    print(f"side = {result['side']}")
+    print()
+
+    print("Rectangle checks:")
+    print(f"  circ rectangle       = {N(result['circ_rectangle'])}")
+    print(f"  star upper rectangle = {N(result['star_upper_rectangle'])}")
+    print(f"  star lower rectangle = {N(result['star_lower_rectangle'])}")
+    print()
+
+    print("Shift identity:")
+    print(f"  original vertical    = {N(result['original'])}")
+    print(f"  shifted expression   = {N(result['shifted'])}")
+    print(f"  shift error          = {N(result['shift_error'])}")
+    print()
+
+    print("Normalized by iT:")
+    print(f"  original vertical    = {N(result['original_normalized'])}")
+    print(f"  shifted expression   = {N(result['shifted_normalized'])}")
+    print(f"  shift error          = {N(result['shift_error_normalized'])}")
+    print()
+
+
+
+
+
 def contour_shift_chirre_regularized_zeta(
     x,
     sigma=0,
