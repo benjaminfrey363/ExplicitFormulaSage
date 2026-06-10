@@ -149,5 +149,11 @@ def test_chirre_first_zeta_zero_pair_minus():
 
 
 
+###############
+## RUN TESTS ##
+###############
+
+
+
 test_chirre_first_zeta_zero_pair_plus()
 test_chirre_first_zeta_zero_pair_minus()

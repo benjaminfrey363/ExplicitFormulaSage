@@ -1127,36 +1127,81 @@ def print_chirre_toy_pole_contour_shift_result(result):
 # Chirre circ/star contour shift for -zeta'/zeta
 # ============================================================
 
-def zeta_prime_numeric(s, h=1e-6):
+
+
+
+# ============================================================
+# ADDED: Higher-precision zeta logarithmic derivative
+# ============================================================
+
+import mpmath as mp
+
+
+def sage_complex_to_mpmath(s, dps=50):
     """
-    Numerically approximate zeta'(s) by a centered finite difference.
+    Convert a Sage complex/real number to an mpmath complex number.
 
-    This is good enough for the first contour-shift experiment. Later we
-    can replace this with a more robust derivative if needed.
+    The numerical integration points are usually only machine precision,
+    so we convert through Python floats instead of asking Sage to create
+    artificial high precision.
     """
-    return (zeta(s + h) - zeta(s - h)) / (2*h)
+    mp.mp.dps = dps
+
+    return mp.mpc(
+        float(real(s)),
+        float(imag(s)),
+    )
 
 
-def minus_zeta_prime_over_zeta_regularized(s):
+def mpmath_complex_to_sage(z):
+    """
+    Convert an mpmath complex number back to a Sage complex number.
+    """
+    return RDF(str(mp.re(z))) + I*RDF(str(mp.im(z)))
+
+
+def zeta_prime_mpmath(s, dps=50):
+    """
+    Compute zeta'(s) using mpmath.
+    """
+    mp.mp.dps = dps
+    smp = sage_complex_to_mpmath(s, dps=dps)
+
+    return mpmath_complex_to_sage(mp.zeta(smp, derivative=1))
+
+
+def zeta_mpmath(s, dps=50):
+    """
+    Compute zeta(s) using mpmath.
+    """
+    mp.mp.dps = dps
+    smp = sage_complex_to_mpmath(s, dps=dps)
+
+    return mpmath_complex_to_sage(mp.zeta(smp))
+
+
+def minus_zeta_prime_over_zeta_regularized(s, dps=50):
     """
     Regularized logarithmic derivative
 
         F(s) = -zeta'(s)/zeta(s) - 1/(s - 1).
 
-    The subtraction removes the pole at s = 1.
+    Near s = 1,
 
-    Near s = 1, we use the limiting value
-
-        -gamma,
-
-    because
-
-        -zeta'(s)/zeta(s) = 1/(s - 1) - gamma + O(s - 1).
+        F(s) -> -EulerGamma.
     """
-    if abs(s - 1) < 1e-8:
+    if abs(s - 1) < 1e-10:
         return -euler_gamma
 
-    return -zeta_prime_numeric(s) / zeta(s) - 1/(s - 1)
+    zeta_value = zeta_mpmath(s, dps=dps)
+    zeta_prime_value = zeta_prime_mpmath(s, dps=dps)
+
+    return -zeta_prime_value / zeta_value - 1/(s - 1)
+
+
+
+
+
 
 
 def first_zeta_zero_pair():
