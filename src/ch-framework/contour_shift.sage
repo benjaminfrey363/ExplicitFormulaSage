@@ -852,3 +852,273 @@ def print_chirre_regularized_contour_shift_result(result):
     print(f"  left contribution   = {N(result['left_normalized'])}")
     print(f"  bottom contribution = {N(result['bottom_normalized'])}")
     print()
+
+
+
+
+
+# ============================================================
+# Chirre circ/star contour shift with a toy pole
+# ============================================================
+
+def make_toy_pole_function(rho):
+    """
+    Return the meromorphic toy function
+
+        F(s) = 1/(s - rho).
+
+    This has a simple pole at s = rho with residue 1.
+    """
+    return lambda s: 1/(s - rho)
+
+
+def is_inside_chirre_rectangle(rho, alpha, T):
+    """
+    Check whether rho lies inside the rectangle
+
+        alpha <= Re(s) <= 1,
+        -T <= Im(s) <= T.
+    """
+    return (
+        alpha < real(rho) < 1
+        and -T < imag(rho) < T
+    )
+
+
+def chirre_toy_residue_circ(rho, x, sigma, T, side):
+    """
+    Residue of
+
+        G_circ(s) =
+            Phi_circ_lambda((s-1)/(iT)) * x^s / (s-rho)
+
+    at s = rho.
+    """
+    lam = chirre_lambda(sigma, T)
+    z = (rho - 1) / (I*T)
+
+    return chirre_Phi_circ_lambda(z, lam, side) * x**rho
+
+
+def chirre_toy_residue_star(rho, x, sigma, T, side):
+    """
+    Residue of
+
+        G_star(s) =
+            Phi_star_lambda((s-1)/(iT)) * x^s / (s-rho)
+
+    at s = rho.
+    """
+    lam = chirre_lambda(sigma, T)
+    z = (rho - 1) / (I*T)
+
+    return chirre_Phi_star_lambda(z, lam, side) * x**rho
+
+
+def chirre_toy_residue_for_original_integrand(rho, x, sigma, T, side):
+    """
+    Residue contribution for the original piecewise integrand
+
+        G_circ + sgn(Im(s)) G_star.
+
+    If Im(rho) > 0, use circ + star.
+    If Im(rho) < 0, use circ - star.
+    If Im(rho) = 0, this toy function is on the seam, and we do not
+    handle it in this diagnostic.
+    """
+    if abs(imag(rho)) < 1e-12:
+        raise ValueError("rho lies on the real seam; choose Im(rho) != 0.")
+
+    circ_residue = chirre_toy_residue_circ(rho, x, sigma, T, side)
+    star_residue = chirre_toy_residue_star(rho, x, sigma, T, side)
+
+    if imag(rho) > 0:
+        return circ_residue + star_residue
+
+    return circ_residue - star_residue
+
+
+def contour_shift_chirre_toy_pole(
+    rho,
+    x,
+    sigma=0,
+    T=20,
+    alpha=0.5,
+    side="plus",
+):
+    """
+    Test the Chirre circ/star contour shift with a controlled toy pole.
+
+    We take
+
+        F(s) = 1/(s - rho),
+
+    so the only pole is at rho.
+
+    This lets us verify that the residue terms have the correct sign and
+    normalization before using a real arithmetic function such as
+    -zeta'/zeta.
+
+    The test computes:
+
+        original vertical integral
+
+    and compares it against
+
+        shifted boundary terms + 2*pi*i * residue contribution.
+
+    Here the shifted boundary terms are assembled using the same circ/star
+    decomposition as in the no-pole regularized zeta test.
+    """
+    if not is_inside_chirre_rectangle(rho, alpha, T):
+        raise ValueError(
+            "rho must lie strictly inside alpha < Re(s) < 1, "
+            "-T < Im(s) < T."
+        )
+
+    if abs(imag(rho)) < 1e-12:
+        raise ValueError("rho must not lie on the real seam.")
+
+    F_toy = make_toy_pole_function(rho)
+
+    G_circ, G_star = make_chirre_regularized_integrand_pieces(
+        F_regular=F_toy,
+        x=x,
+        sigma=sigma,
+        T=T,
+        side=side,
+    )
+
+    original = chirre_original_vertical_integral_from_pieces(G_circ, G_star, T)
+
+    circ = chirre_circ_rectangle_integrals(G_circ, alpha, T)
+    star_upper = chirre_star_upper_rectangle_integrals(G_star, alpha, T)
+    star_lower = chirre_star_lower_rectangle_integrals(G_star, alpha, T)
+
+    circ_residue = chirre_toy_residue_circ(rho, x, sigma, T, side)
+    star_residue = chirre_toy_residue_star(rho, x, sigma, T, side)
+    original_residue = chirre_toy_residue_for_original_integrand(
+        rho=rho,
+        x=x,
+        sigma=sigma,
+        T=T,
+        side=side,
+    )
+
+    # Circ rectangle:
+    #
+    #   right + top + left + bottom = 2*pi*i*circ_residue
+    #
+    # so
+    #
+    #   right = 2*pi*i*circ_residue - top - left - bottom.
+    circ_shifted_right = (
+        2*pi*I*circ_residue
+        - circ["top"]
+        - circ["left_down"]
+        - circ["bottom"]
+    )
+
+    # Star rectangles depend on whether rho lies in the upper or lower half.
+    #
+    # Upper:
+    #   right + top + left + seam = 2*pi*i*star_residue
+    #
+    # Lower:
+    #   right + seam + left + bottom = 2*pi*i*star_residue
+    #
+    if imag(rho) > 0:
+        star_upper_residue_term = 2*pi*I*star_residue
+        star_lower_residue_term = 0
+    else:
+        star_upper_residue_term = 0
+        star_lower_residue_term = 2*pi*I*star_residue
+
+    star_upper_shifted_right = (
+        star_upper_residue_term
+        - star_upper["top"]
+        - star_upper["left_down"]
+        - star_upper["seam"]
+    )
+
+    star_lower_shifted_right = (
+        star_lower_residue_term
+        - star_lower["seam"]
+        - star_lower["left_down"]
+        - star_lower["bottom"]
+    )
+
+    # Original vertical:
+    #
+    #   circ full right + star upper right - star lower right.
+    shifted = (
+        circ_shifted_right
+        + star_upper_shifted_right
+        - star_lower_shifted_right
+    )
+
+    return {
+        "rho": rho,
+        "x": x,
+        "sigma": sigma,
+        "T": T,
+        "alpha": alpha,
+        "side": side,
+        "original": original,
+        "shifted": shifted,
+        "shift_error": original - shifted,
+        "circ_rectangle": circ["rectangle"],
+        "star_upper_rectangle": star_upper["rectangle"],
+        "star_lower_rectangle": star_lower["rectangle"],
+        "circ_residue": circ_residue,
+        "star_residue": star_residue,
+        "original_residue": original_residue,
+        "circ_rectangle_error": circ["rectangle"] - 2*pi*I*circ_residue,
+        "star_upper_rectangle_error": star_upper["rectangle"] - star_upper_residue_term,
+        "star_lower_rectangle_error": star_lower["rectangle"] - star_lower_residue_term,
+        "original_normalized": original / (I*T),
+        "shifted_normalized": shifted / (I*T),
+        "shift_error_normalized": (original - shifted) / (I*T),
+    }
+
+
+def print_chirre_toy_pole_contour_shift_result(result):
+    """
+    Pretty-print the toy-pole Chirre contour-shift diagnostic.
+    """
+    print("=" * 70)
+    print("Chirre circ/star contour shift: toy pole")
+    print("=" * 70)
+    print(f"rho = {N(result['rho'])}")
+    print(f"x = {result['x']}")
+    print(f"sigma = {result['sigma']}")
+    print(f"T = {result['T']}")
+    print(f"alpha = {result['alpha']}")
+    print(f"side = {result['side']}")
+    print()
+
+    print("Residues:")
+    print(f"  circ residue        = {N(result['circ_residue'])}")
+    print(f"  star residue        = {N(result['star_residue'])}")
+    print(f"  original residue    = {N(result['original_residue'])}")
+    print()
+
+    print("Rectangle checks:")
+    print(f"  circ rectangle error       = {N(result['circ_rectangle_error'])}")
+    print(f"  star upper rectangle error = {N(result['star_upper_rectangle_error'])}")
+    print(f"  star lower rectangle error = {N(result['star_lower_rectangle_error'])}")
+    print()
+
+    print("Shift identity:")
+    print(f"  original vertical    = {N(result['original'])}")
+    print(f"  shifted expression   = {N(result['shifted'])}")
+    print(f"  shift error          = {N(result['shift_error'])}")
+    print()
+
+    print("Normalized by iT:")
+    print(f"  original vertical    = {N(result['original_normalized'])}")
+    print(f"  shifted expression   = {N(result['shifted_normalized'])}")
+    print(f"  shift error          = {N(result['shift_error_normalized'])}")
+    print()
+
+

@@ -86,6 +86,45 @@ def test_chirre_pieces_regularized_zeta_minus():
 
 
 
+def test_chirre_toy_pole_upper_plus():
+    """
+    Toy pole in the upper half-plane.
+    """
+    rho = 0.75 + 3*I
 
-test_chirre_pieces_regularized_zeta_plus()
-test_chirre_pieces_regularized_zeta_minus()
+    result = contour_shift_chirre_toy_pole(
+        rho=rho,
+        x=25.7,
+        sigma=0,
+        T=20,
+        alpha=0.5,
+        side="plus",
+    )
+
+    print_chirre_toy_pole_contour_shift_result(result)
+
+
+def test_chirre_toy_pole_lower_plus():
+    """
+    Toy pole in the lower half-plane.
+
+    This checks the sign convention for the lower star rectangle.
+    """
+    rho = 0.75 - 3*I
+
+    result = contour_shift_chirre_toy_pole(
+        rho=rho,
+        x=25.7,
+        sigma=0,
+        T=20,
+        alpha=0.5,
+        side="plus",
+    )
+
+    print_chirre_toy_pole_contour_shift_result(result)
+
+
+
+
+test_chirre_toy_pole_upper_plus()
+test_chirre_toy_pole_lower_plus()
