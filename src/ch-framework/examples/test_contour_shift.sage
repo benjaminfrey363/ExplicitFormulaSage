@@ -124,7 +124,30 @@ def test_chirre_toy_pole_lower_plus():
     print_chirre_toy_pole_contour_shift_result(result)
 
 
+def test_chirre_first_zeta_zero_pair_plus():
+    result = contour_shift_chirre_zeta_zero_pair(
+        x=25.7,
+        sigma=0,
+        T=20,
+        alpha=0.25,
+        side="plus",
+    )
+
+    print_chirre_zeta_zero_pair_result(result)
 
 
-test_chirre_toy_pole_upper_plus()
-test_chirre_toy_pole_lower_plus()
+def test_chirre_first_zeta_zero_pair_minus():
+    result = contour_shift_chirre_zeta_zero_pair(
+        x=25.7,
+        sigma=0,
+        T=20,
+        alpha=0.25,
+        side="minus",
+    )
+
+    print_chirre_zeta_zero_pair_result(result)
+
+
+
+test_chirre_first_zeta_zero_pair_plus()
+test_chirre_first_zeta_zero_pair_minus()
