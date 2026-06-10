@@ -1480,3 +1480,254 @@ def print_chirre_zeta_zero_pair_result(result):
     print(f"  shift error          = {N(result['shift_error_normalized'])}")
     print()
 
+
+
+
+
+# ============================================================
+# Zeta-zero residue sums up to height T
+# ============================================================
+
+def zeta_zero_pairs_up_to_height(T, max_zeros=None, safety_margin=1e-8):
+    """
+    Return conjugate pairs of nontrivial zeta zeros
+
+        1/2 +/- i gamma
+
+    with
+
+        0 < gamma < T - safety_margin.
+
+    This uses Sage's Odlyzko zero database.
+
+    Parameters
+    ----------
+    T : real
+        Height cutoff.
+    max_zeros : int or None
+        Optional cap on the number of positive ordinates used.
+    safety_margin : real
+        Keep zeros away from the horizontal contour boundary Im(s)=+/-T.
+
+    Returns
+    -------
+    list
+        List of zeros, including both upper and lower half-plane zeros.
+    """
+    if T <= 0:
+        raise ValueError("T must be positive")
+
+    from sage.databases.odlyzko import zeta_zeros
+
+    zero_ordinates = zeta_zeros()
+
+    zeros = []
+    count = 0
+    index = 0
+
+    while True:
+        if max_zeros is not None and count >= max_zeros:
+            break
+
+        gamma = zero_ordinates[index]
+        gamma = RDF(gamma)
+
+        if gamma >= T - safety_margin:
+            break
+
+        zeros.append(1/2 + I*gamma)
+        zeros.append(1/2 - I*gamma)
+
+        count += 1
+        index += 1
+
+    return zeros
+
+
+def count_positive_zeta_zeros_up_to_height(T, max_zeros=None):
+    """
+    Count how many positive zeta zero ordinates are below T.
+
+    This is a small convenience wrapper for diagnostics.
+    """
+    zeros = zeta_zero_pairs_up_to_height(T, max_zeros=max_zeros)
+    return len(zeros) // 2
+
+
+def contour_shift_chirre_zeta_zeros_up_to_height(
+    x,
+    sigma=0,
+    T=50,
+    alpha=0.25,
+    side="plus",
+    max_zeros=None,
+):
+    """
+    Test the Chirre circ/star contour shift for
+
+        F(s) = -zeta'(s)/zeta(s) - 1/(s - 1),
+
+    using all zeta zeros available below height T.
+
+    This generalizes contour_shift_chirre_zeta_zero_pair.
+
+    The shifted rectangle is
+
+        alpha <= Re(s) <= 1,
+        -T <= Im(s) <= T.
+
+    With alpha < 1/2, the nontrivial zeros on the critical line are inside
+    the rectangle.
+    """
+    if not (alpha < 1/2):
+        raise ValueError("For this test, choose alpha < 1/2.")
+
+    if T <= 0:
+        raise ValueError("T must be positive.")
+
+    zeros = zeta_zero_pairs_up_to_height(
+        T=T,
+        max_zeros=max_zeros,
+    )
+
+    residue_data = zeta_zero_residue_sums(
+        zeros=zeros,
+        x=x,
+        sigma=sigma,
+        T=T,
+        alpha=alpha,
+        side=side,
+    )
+
+    G_circ, G_star = make_chirre_regularized_integrand_pieces(
+        F_regular=minus_zeta_prime_over_zeta_regularized,
+        x=x,
+        sigma=sigma,
+        T=T,
+        side=side,
+    )
+
+    original = chirre_original_vertical_integral_from_pieces(G_circ, G_star, T)
+
+    circ = chirre_circ_rectangle_integrals(G_circ, alpha, T)
+    star_upper = chirre_star_upper_rectangle_integrals(G_star, alpha, T)
+    star_lower = chirre_star_lower_rectangle_integrals(G_star, alpha, T)
+
+    circ_residue_sum = residue_data["circ_residue_sum"]
+    star_upper_residue_sum = residue_data["star_upper_residue_sum"]
+    star_lower_residue_sum = residue_data["star_lower_residue_sum"]
+
+    circ_rectangle_error = circ["rectangle"] - 2*pi*I*circ_residue_sum
+
+    star_upper_rectangle_error = (
+        star_upper["rectangle"]
+        - 2*pi*I*star_upper_residue_sum
+    )
+
+    star_lower_rectangle_error = (
+        star_lower["rectangle"]
+        - 2*pi*I*star_lower_residue_sum
+    )
+
+    circ_shifted_right = (
+        2*pi*I*circ_residue_sum
+        - circ["top"]
+        - circ["left_down"]
+        - circ["bottom"]
+    )
+
+    star_upper_shifted_right = (
+        2*pi*I*star_upper_residue_sum
+        - star_upper["top"]
+        - star_upper["left_down"]
+        - star_upper["seam"]
+    )
+
+    star_lower_shifted_right = (
+        2*pi*I*star_lower_residue_sum
+        - star_lower["seam"]
+        - star_lower["left_down"]
+        - star_lower["bottom"]
+    )
+
+    shifted = (
+        circ_shifted_right
+        + star_upper_shifted_right
+        - star_lower_shifted_right
+    )
+
+    return {
+        "x": x,
+        "sigma": sigma,
+        "T": T,
+        "alpha": alpha,
+        "side": side,
+        "max_zeros": max_zeros,
+        "zeros_inside": residue_data["zeros_inside"],
+        "num_zero_pairs": len(residue_data["zeros_inside"]) // 2,
+        "circ_residue_sum": circ_residue_sum,
+        "star_upper_residue_sum": star_upper_residue_sum,
+        "star_lower_residue_sum": star_lower_residue_sum,
+        "original_residue_sum": residue_data["original_residue_sum"],
+        "original": original,
+        "shifted": shifted,
+        "shift_error": original - shifted,
+        "circ_rectangle_error": circ_rectangle_error,
+        "star_upper_rectangle_error": star_upper_rectangle_error,
+        "star_lower_rectangle_error": star_lower_rectangle_error,
+        "original_normalized": original / (I*T),
+        "shifted_normalized": shifted / (I*T),
+        "shift_error_normalized": (original - shifted) / (I*T),
+    }
+
+
+def print_chirre_zeta_zeros_up_to_height_result(result):
+    """
+    Pretty-print the many-zero Chirre contour-shift diagnostic.
+    """
+    print("=" * 70)
+    print("Chirre circ/star contour shift: zeta zeros up to height T")
+    print("=" * 70)
+    print(f"x = {result['x']}")
+    print(f"sigma = {result['sigma']}")
+    print(f"T = {result['T']}")
+    print(f"alpha = {result['alpha']}")
+    print(f"side = {result['side']}")
+    print(f"max_zeros = {result['max_zeros']}")
+    print(f"number of zero pairs = {result['num_zero_pairs']}")
+    print()
+
+    print("Zeros inside:")
+    for rho in result["zeros_inside"]:
+        if imag(rho) > 0:
+            print(f"  rho = {N(rho)}")
+    print("  plus conjugates")
+    print()
+
+    print("Residue sums:")
+    print(f"  circ residue sum        = {N(result['circ_residue_sum'])}")
+    print(f"  star upper residue sum  = {N(result['star_upper_residue_sum'])}")
+    print(f"  star lower residue sum  = {N(result['star_lower_residue_sum'])}")
+    print(f"  original residue sum    = {N(result['original_residue_sum'])}")
+    print()
+
+    print("Rectangle checks:")
+    print(f"  circ rectangle error       = {N(result['circ_rectangle_error'])}")
+    print(f"  star upper rectangle error = {N(result['star_upper_rectangle_error'])}")
+    print(f"  star lower rectangle error = {N(result['star_lower_rectangle_error'])}")
+    print()
+
+    print("Shift identity:")
+    print(f"  original vertical    = {N(result['original'])}")
+    print(f"  shifted expression   = {N(result['shifted'])}")
+    print(f"  shift error          = {N(result['shift_error'])}")
+    print()
+
+    print("Normalized by iT:")
+    print(f"  original vertical    = {N(result['original_normalized'])}")
+    print(f"  shifted expression   = {N(result['shifted_normalized'])}")
+    print(f"  shift error          = {N(result['shift_error_normalized'])}")
+    print()
+
+
+

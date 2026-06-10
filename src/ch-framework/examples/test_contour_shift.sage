@@ -149,11 +149,40 @@ def test_chirre_first_zeta_zero_pair_minus():
 
 
 
+
+
+def test_chirre_zeta_zeros_up_to_height_plus():
+    result = contour_shift_chirre_zeta_zeros_up_to_height(
+        x=25.7,
+        sigma=0,
+        T=50,
+        alpha=0.25,
+        side="plus",
+    )
+
+    print_chirre_zeta_zeros_up_to_height_result(result)
+
+
+def test_chirre_zeta_zeros_up_to_height_minus():
+    result = contour_shift_chirre_zeta_zeros_up_to_height(
+        x=25.7,
+        sigma=0,
+        T=50,
+        alpha=0.25,
+        side="minus",
+    )
+
+    print_chirre_zeta_zeros_up_to_height_result(result)
+
+
+
+
+
 ###############
 ## RUN TESTS ##
 ###############
 
 
 
-test_chirre_first_zeta_zero_pair_plus()
-test_chirre_first_zeta_zero_pair_minus()
+test_chirre_zeta_zeros_up_to_height_plus()
+test_chirre_zeta_zeros_up_to_height_minus()
