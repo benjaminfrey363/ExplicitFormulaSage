@@ -175,6 +175,30 @@ def test_chirre_zeta_zeros_up_to_height_minus():
     print_chirre_zeta_zeros_up_to_height_result(result)
 
 
+# Test to see if big errors in the 2 above tests are from near-boundary zero at T=50
+def test_chirre_zeta_zeros_up_to_height_plus_no_boundary():
+    result = contour_shift_chirre_zeta_zeros_up_to_height(
+        x=25.7,
+        sigma=0,
+        T=45,
+        alpha=0.25,
+        side="plus",
+    )
+
+    print_chirre_zeta_zeros_up_to_height_result(result)
+
+
+
+def test_chirre_zeta_zeros_up_to_height_minus_no_boundary():
+    result = contour_shift_chirre_zeta_zeros_up_to_height(
+        x=25.7,
+        sigma=0,
+        T=45,
+        alpha=0.25,
+        side="minus",
+    )
+
+    print_chirre_zeta_zeros_up_to_height_result(result)
 
 
 
@@ -184,5 +208,5 @@ def test_chirre_zeta_zeros_up_to_height_minus():
 
 
 
-test_chirre_zeta_zeros_up_to_height_plus()
-test_chirre_zeta_zeros_up_to_height_minus()
+test_chirre_zeta_zeros_up_to_height_plus_no_boundary()
+test_chirre_zeta_zeros_up_to_height_minus_no_boundary()
