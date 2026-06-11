@@ -380,6 +380,7 @@ def chirre_explicit_formula_diagnostic(
     #
     # This should match the smoothed sum side, up to numerical/truncation
     # errors.
+    '''
     integral_side = (
         main_pole
         + regularized_vertical_normalized
@@ -390,6 +391,40 @@ def chirre_explicit_formula_diagnostic(
         main_pole
         + shifted_regularized_normalized
         + cutoff_correction
+    )
+    '''
+
+    # This is the verified contour-shift identity for the regularized part.
+    regularized_shift_error = (
+        regularized_vertical_normalized
+        - shifted_regularized_normalized
+    )
+
+    # This is a proposition-style expression using the pole/cutoff term.
+    # Do not compare this directly to the smoothed sum yet.
+    proposition_style_expression = (
+        main_pole
+        + regularized_vertical_normalized
+        + cutoff_correction
+    )
+
+    shifted_proposition_style_expression = (
+        main_pole
+        + shifted_regularized_normalized
+        + cutoff_correction
+    )
+
+    proposition_shift_error = (
+        proposition_style_expression
+        - shifted_proposition_style_expression
+    )
+
+    # This is only a diagnostic: it tells us what pole contribution would be
+    # required if we wanted the regularized vertical integral to match the
+    # smoothed sum exactly.
+    implied_smoothed_pole_term = (
+        smoothed_sum
+        - regularized_vertical_normalized
     )
 
     zero_residue_normalized = (
@@ -430,19 +465,35 @@ def chirre_explicit_formula_diagnostic(
         "zero_residue_normalized": zero_residue_normalized,
         "boundary_normalized": boundary_normalized,
 
+        '''
         "integral_side": integral_side,
         "shifted_integral_side": shifted_integral_side,
 
         "sum_minus_integral": smoothed_sum - integral_side,
         "integral_minus_shifted": integral_side - shifted_integral_side,
+        '''
+
+        "proposition_style_expression": proposition_style_expression,
+        "shifted_proposition_style_expression": shifted_proposition_style_expression,
+        "proposition_shift_error": proposition_shift_error,
+
+        "regularized_shift_error": regularized_shift_error,
+
+        "implied_smoothed_pole_term": implied_smoothed_pole_term,
+        "proposition_pole_term_discrepancy": main_pole - implied_smoothed_pole_term,
+
+        "exact_minus_smoothed_real": exact_psi - real(smoothed_sum),
+
         "exact_minus_smoothed_real": exact_psi - real(smoothed_sum),
 
         "residue_data": residue_data,
         "contour_data": contour_data,
         "shifted_data": shifted_data,
 
+        '''
         "implied_pole_term": implied_pole_term,
         "pole_term_discrepancy": pole_term_discrepancy,
+        '''
     }
 
 
@@ -466,8 +517,13 @@ def print_chirre_explicit_formula_diagnostic(result):
     print("Main quantities:")
     print(f"  exact psi(x)              = {N(result['exact_psi'])}")
     print(f"  smoothed sum              = {N(result['smoothed_sum'])}")
+
+    '''
     print(f"  integral side             = {N(result['integral_side'])}")
     print(f"  shifted integral side     = {N(result['shifted_integral_side'])}")
+    '''
+    print(f"  proposition-style expr    = {N(result['proposition_style_expression'])}")
+    print(f"  shifted prop-style expr   = {N(result['shifted_proposition_style_expression'])}")
     print()
 
     print("Decomposition:")
@@ -475,12 +531,23 @@ def print_chirre_explicit_formula_diagnostic(result):
     print(f"  zero residues normalized  = {N(result['zero_residue_normalized'])}")
     print(f"  boundary normalized       = {N(result['boundary_normalized'])}")
     print(f"  cutoff correction         = {N(result['cutoff_correction'])}")
+
+    '''
     print(f"  implied pole term        = {N(result['implied_pole_term'])}")
     print(f"  pole term discrepancy    = {N(result['pole_term_discrepancy'])}")
+    '''
+    print(f"  implied smoothed pole    = {N(result['implied_smoothed_pole_term'])}")
+    print(f"  prop pole discrepancy    = {N(result['proposition_pole_term_discrepancy'])}")
+
     print()
 
     print("Consistency checks:")
+    '''
     print(f"  smoothed - integral       = {N(result['sum_minus_integral'])}")
     print(f"  integral - shifted        = {N(result['integral_minus_shifted'])}")
+    print(f"  exact psi - Re(smoothed)  = {N(result['exact_minus_smoothed_real'])}")
+    '''
+    print(f"  regularized shift error   = {N(result['regularized_shift_error'])}")
+    print(f"  prop-style shift error    = {N(result['proposition_shift_error'])}")
     print(f"  exact psi - Re(smoothed)  = {N(result['exact_minus_smoothed_real'])}")
     print()
