@@ -400,6 +400,16 @@ def chirre_explicit_formula_diagnostic(
 
     boundary_normalized = shifted_regularized_normalized - zero_residue_normalized
 
+
+    implied_pole_term = (
+        smoothed_sum
+        - regularized_vertical_normalized
+        - cutoff_correction
+    )
+
+    pole_term_discrepancy = main_pole - implied_pole_term
+
+
     return {
         "x": x,
         "sigma": sigma,
@@ -430,6 +440,9 @@ def chirre_explicit_formula_diagnostic(
         "residue_data": residue_data,
         "contour_data": contour_data,
         "shifted_data": shifted_data,
+
+        "implied_pole_term": implied_pole_term,
+        "pole_term_discrepancy": pole_term_discrepancy,
     }
 
 
@@ -462,6 +475,8 @@ def print_chirre_explicit_formula_diagnostic(result):
     print(f"  zero residues normalized  = {N(result['zero_residue_normalized'])}")
     print(f"  boundary normalized       = {N(result['boundary_normalized'])}")
     print(f"  cutoff correction         = {N(result['cutoff_correction'])}")
+    print(f"  implied pole term        = {N(result['implied_pole_term'])}")
+    print(f"  pole term discrepancy    = {N(result['pole_term_discrepancy'])}")
     print()
 
     print("Consistency checks:")
