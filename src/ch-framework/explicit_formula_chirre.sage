@@ -465,14 +465,6 @@ def chirre_explicit_formula_diagnostic(
         "zero_residue_normalized": zero_residue_normalized,
         "boundary_normalized": boundary_normalized,
 
-        '''
-        "integral_side": integral_side,
-        "shifted_integral_side": shifted_integral_side,
-
-        "sum_minus_integral": smoothed_sum - integral_side,
-        "integral_minus_shifted": integral_side - shifted_integral_side,
-        '''
-
         "proposition_style_expression": proposition_style_expression,
         "shifted_proposition_style_expression": shifted_proposition_style_expression,
         "proposition_shift_error": proposition_shift_error,
@@ -489,11 +481,6 @@ def chirre_explicit_formula_diagnostic(
         "residue_data": residue_data,
         "contour_data": contour_data,
         "shifted_data": shifted_data,
-
-        '''
-        "implied_pole_term": implied_pole_term,
-        "pole_term_discrepancy": pole_term_discrepancy,
-        '''
     }
 
 
