@@ -82,3 +82,30 @@ sage: zeta_zeros_up_to_height(40)
  37.586178159]
 ```
 
+
+## Example usage of sr/ch-framework
+
+ch-framework contains implementations of the framework described in Chirre and Helfgott's paper "Optimal bounds for the sums of nonnegative arithmetic functions".
+This includes an implementation of Chirre and Helfgott's Perron-type formula, smooth sum identity, integral bounds, contour shift, and full explicit formula.
+Each of these parts can be seen as a "step" in the CH paper, and corresponds to an
+identity which is proven true.
+These implementations include tests (contained in examples folder) which can be used
+to measure the error in each identity when certain variables are truncated/changed.
+To run such a test, add desired function to body of test .sage file and run:
+
+e.g. in test_weighted_perron.sage:
+
+```bash
+(body)
+
+test_weighted_perron_with_zeta_box()
+```
+
+and run:
+
+```bash
+sage src/ch-framework/examples/test_weighted_perron.sage
+```
+
+(TO-DO: outline of using full pipeline)
+
