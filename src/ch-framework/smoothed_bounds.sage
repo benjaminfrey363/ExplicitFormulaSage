@@ -1,7 +1,7 @@
 """
 smoothed_bounds.sage
 
-Stage 1 of the Chirre--Helfgott framework.
+Stage 1 (kinda) of the Chirre--Helfgott framework.
 
 This file implements the sum-side version of the smoothing argument.
 

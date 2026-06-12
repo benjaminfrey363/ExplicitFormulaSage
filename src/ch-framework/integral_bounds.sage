@@ -1,7 +1,7 @@
 """
 integral_bounds.sage
 
-Stage 2 of the Chirre--Helfgott framework.
+Stage 2 (kinda) of the Chirre--Helfgott framework.
 
 This file implements the integral-side upper/lower bounds from the
 Proposition 2.4 layer.

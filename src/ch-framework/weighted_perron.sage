@@ -3,6 +3,7 @@ weighted_perron.sage
 
 General numerical framework for Chirre--Helfgott's weighted Perron-type
 formula.
+Builds on top of src/perron
 
 This file implements the identity
 
