@@ -22,10 +22,55 @@ zeros by taking
 This module is intended for SageMath and requires the odlyzko-zeta zeta zero database.
 """
 
-from sage.all import pi, log
+from sage.all import RealField, pi, log
 from ch_comp import odlyzko_wrapper as ow
 
 print(ow.first_zeta_zero_imaginary_parts(10))
+
+
+def _validate_x(x):
+    """
+    Check that x is in the range where the displayed explicit formula makes sense.
+    """
+    if x <= 1:
+        raise ValueError("x must be greater than 1")
+
+
+def explicit_formula_psi_approx(x, gammas, prec=80):
+    """
+    Compute truncated explicit formula for psi(x) given list of zero ordinates.
+
+    That is, we compute
+
+        x - 2 Re sum_{gamma > 0} x^{1/2 + i gamma}/(1/2 + i gamma)
+        - log(2*pi) - (1/2) log(1 - x^{-2})
+
+    where sum runs over gamma in gammas.
+
+    Parameters
+    ----------
+    x : real
+        Point at which to approximate psi(x).
+    gammas : iterable, passed as list
+        Positive imaginary parts of zeta zeros
+    prec : int
+        Working precision in bits
+
+    Returns
+    -------
+    Sage real number
+        Truncated explicit-formula approximation to psi(x)
+    """
+
+    # First, validate argument x
+    _validate_x(x)
+
+    # Construct real field of specified precision and cast x
+    R = RealField(prec)
+    x = R(x)
+
+    
+
 
 
 
