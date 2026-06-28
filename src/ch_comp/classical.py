@@ -22,11 +22,8 @@ zeros by taking
 This module is intended for SageMath and requires the odlyzko-zeta zeta zero database.
 """
 
-from sage.all import RealField, pi, log
-from ch_comp import odlyzko_wrapper as ow
-
-print(ow.first_zeta_zero_imaginary_parts(10))
-
+from sage.all import RealField, ComplexField, pi, log, numerical_approx
+from ch_comp import odlyzko_wrapper as ow, chebyshev
 
 def _validate_x(x):
     """
@@ -34,6 +31,38 @@ def _validate_x(x):
     """
     if x <= 1:
         raise ValueError("x must be greater than 1")
+    
+
+def single_zero_term(x, gamma, prec=80):
+    """
+    Helper function to compute a single zero term
+    
+        x^rho / rho for rho = 1/2 + i gamma
+
+    Here we assume RH holds for rho.
+
+    Parameters
+    ----------
+    x : real
+        Point at which explicit formula is evaluated
+    gamma : real
+        Positive ordinate of nontrivial zeta zero
+    prec : int
+        Working precision in bits
+
+    Returns
+    -------
+    Sage complex number
+        x^rho / rho
+    """
+    _validate_x(x)
+
+    R = RealField(prec)
+    C = ComplexField(prec)
+
+    x = R(x)
+    rho = C(R(1)/R(2), R(gamma))
+    return C(x) ** rho / rho
 
 
 def explicit_formula_psi_approx(x, gammas, prec=80):
@@ -69,9 +98,51 @@ def explicit_formula_psi_approx(x, gammas, prec=80):
     R = RealField(prec)
     x = R(x)
 
-    
+    # Compute zero term
+    # 2 Re sum_{gamma > 0} x^{1/2 + i gamma}/(1/2 + i gamma)
+    C = ComplexField(prec)
+    zero_sum = C(0)
+    for gamma in gammas:
+        zero_sum += single_zero_term(x, gamma, prec=prec)
+    zero_term = 2 * zero_sum.real()
+
+    # Compute correction term
+    #   log(2*pi) + (1/2) log (1 - x^{-2})
+    correction_term = log(2 * R(pi)) + (R(1) / R(2)) * log(1 - x ** (-2))
+
+    # Return final approximation, x - (zero sum) - (correction term)
+    return x - zero_term - correction_term
 
 
 
+
+def explicit_formula_psi_approx_first_n(x, n_zeros, prec=80):
+    """
+    Approximate psi(x) using the first n_zeros positive zeta zero ordinates,
+    called from Odlyzko zero database.
+
+    Parameters
+    ----------
+    x : real
+        Point at which to approximate psi(x)
+    n_zeros : int
+        Number of positive zero ordinates to use
+    prec : int
+        Working precision in bits
+
+    Returns
+    -------
+    Sage real number, truncated classical explicit formula approximation to psi(x)
+    """
+    if n_zeros < 0:
+        raise ValueError("n_zeros must be nonnegative")
+    gammas = ow.first_zeta_zero_imaginary_parts(n_zeros)
+    return explicit_formula_psi_approx(x, gammas, prec=prec)
+
+
+
+print(f"psi(100) = {numerical_approx(chebyshev.chebyshev_psi(100))}")
+for n in [1000,2000,5000,10000]:
+    print(f"CEF(100,{n}) = {explicit_formula_psi_approx_first_n(100,n)}")
 
 
