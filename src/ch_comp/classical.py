@@ -22,7 +22,7 @@ zeros by taking
 This module is intended for SageMath and requires the odlyzko-zeta zeta zero database.
 """
 
-from sage.all import RealField, ComplexField, pi, log, numerical_approx
+from sage.all import RealField, ComplexField, pi, log, numerical_approx, exp
 import matplotlib.pyplot as plt
 import numpy as np
 import time
@@ -169,26 +169,65 @@ def explicit_formula_psi_approx_height(x, T, prec=80):
 
 
 
-"""
-print(f"psi(100) = {numerical_approx(chebyshev.chebyshev_psi(100))}")
-for n in [1000,2000,5000,10000]:
-    print(f"CEF(100,{n}) = {explicit_formula_psi_approx_first_n(100,n)}")
-"""
+
+
+class ClassicalExplicitFormula:
+    """
+    Evaluator for the truncated classical explicit formula for psi(x).
+
+    Refactored to rebuilding fields, rho-values, and denominators for every x.
+    """
+
+    def __init__(self, gammas, prec=80):
+        self.prec = prec
+        self.R = RealField(prec)
+        self.C = ComplexField(prec)
+
+        self.half = self.R(1) / self.R(2)
+        self.log_2pi = log(2 * self.R(pi))
+
+        self.gammas = [self.R(gamma) for gamma in gammas]
+        self.rhos = [self.C(self.half, gamma) for gamma in self.gammas]
+        self.inv_rhos = [1 / rho for rho in self.rhos]
+
+    def psi(self, x):
+        """
+        Evaluate the truncated classical explicit formula at one x.
+        """
+        _validate_x(x)
+
+        x = self.R(x)
+        log_x = log(x)
+
+        zero_sum = self.C(0)
+        for rho, inv_rho in zip(self.rhos, self.inv_rhos):
+            zero_sum += exp(rho * log_x) * inv_rho
+
+        zero_term = 2 * zero_sum.real()
+        correction_term = self.log_2pi + self.half * log(1 - x ** (-2))
+
+        return x - zero_term - correction_term
+
+
+
+
 
 start_time = time.perf_counter()
 
-x = np.linspace(2,1000,10000)
+x = np.linspace(2,100,1000)
 y1 = [chebyshev.chebyshev_psi(xi) for xi in x]
+
 gammas = ow.first_zeta_zero_imaginary_parts(100)
-y2 = [explicit_formula_psi_approx(xi, gammas) for xi in x]
+cef = ClassicalExplicitFormula(gammas, prec=80)
+y2 = [cef.psi(xi) for xi in x]
+
+end_time = time.perf_counter()
 
 plt.figure(figsize=(8,5))
 plt.plot(x,y1,label='$psi(x)$', color='blue',linewidth=2)
 plt.plot(x,y2,label='$CEF(100)$',color='red',linewidth=2)
 
 plt.show()
-
-end_time = time.perf_counter()
 
 exec_time = end_time - start_time
 print(f"Elapsed time: {exec_time}")
