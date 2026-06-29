@@ -183,6 +183,7 @@ class ClassicalExplicitFormula:
         self.R = RealField(prec)
         self.C = ComplexField(prec)
 
+        # constants
         self.half = self.R(1) / self.R(2)
         self.log_2pi = log(2 * self.R(pi))
 
@@ -210,6 +211,50 @@ class ClassicalExplicitFormula:
 
 
 
+def compute_cef(n_zeros, lb, ub, n_points, prec=80):
+    """
+    Evaluate truncated classical explicit formula for psi(x) on range of points
+    Optimized to reduce redundant construction of fields and loading of zeros
+
+    Parameters
+    ----------
+    n_zeros : int
+        Number of zeta zeros used in approximation
+    lb : int (for now)
+        Lower bound of range of approximation
+    ub : int (for now)
+        Upper bound of range of approximation
+    n_points : int
+        Number of points sampled in range
+
+    Returns
+    -------
+    exec_time : float
+        Execution time
+    xs : list of floats
+        Range of input values
+    ys : list of sage real numbers
+        CEF(n_zeros, x) for x in range
+    """
+    # Start timer
+    start_time = time.perf_counter()
+
+    # construct range
+    xs = np.linspace(lb, ub, n_points)
+    
+    # load zeros
+    gammas = ow.first_zeta_zero_imaginary_parts(n_zeros)
+    # construct CEF and compute
+    cef = ClassicalExplicitFormula(gammas, prec=prec)
+    ys = [cef.psi(x) for x in xs]
+
+    # stop timer
+    end_time = time.perf_counter()
+    exec_time = end_time - start_time
+    
+    return exec_time, ys
+
+
 
 
 start_time = time.perf_counter()
@@ -217,15 +262,22 @@ start_time = time.perf_counter()
 x = np.linspace(2,100,1000)
 y1 = [chebyshev.chebyshev_psi(xi) for xi in x]
 
-gammas = ow.first_zeta_zero_imaginary_parts(100)
-cef = ClassicalExplicitFormula(gammas, prec=80)
-y2 = [cef.psi(xi) for xi in x]
+gammas = ow.first_zeta_zero_imaginary_parts(1000)
+# compute CEF(100), CEF(500), CEF(1000)
+cef100 = ClassicalExplicitFormula(gammas[0:100], prec=80)
+cef500 = ClassicalExplicitFormula(gammas[0:500], prec=80)
+cef1000 = ClassicalExplicitFormula(gammas, prec=80)
+y100 = [cef100.psi(xi) for xi in x]
+y500 = [cef500.psi(xi) for xi in x]
+y1000 = [cef1000.psi(xi) for xi in x]
 
 end_time = time.perf_counter()
 
 plt.figure(figsize=(8,5))
-plt.plot(x,y1,label='$psi(x)$', color='blue',linewidth=2)
-plt.plot(x,y2,label='$CEF(100)$',color='red',linewidth=2)
+plt.plot(x,y1,label="$psi(x)$",color="black",linewidth=2)
+plt.plot(x,y100,label='CEF100', color='blue',linewidth=2)
+plt.plot(x,y500,label='CEF(500)',color='purple',linewidth=2)
+plt.plot(x,y1000,label='CEF(1000)', color='red',linewidth=2)
 
 plt.show()
 
