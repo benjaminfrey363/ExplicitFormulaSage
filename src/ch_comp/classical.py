@@ -23,6 +23,9 @@ This module is intended for SageMath and requires the odlyzko-zeta zeta zero dat
 """
 
 from sage.all import RealField, ComplexField, pi, log, numerical_approx
+import matplotlib.pyplot as plt
+import numpy as np
+
 from ch_comp import odlyzko_wrapper as ow, chebyshev
 
 def _validate_x(x):
@@ -141,8 +144,42 @@ def explicit_formula_psi_approx_first_n(x, n_zeros, prec=80):
 
 
 
+def explicit_formula_psi_approx_height(x, T, prec=80):
+    """
+    Approximate psi(x) using all available zeta zero ordinates gamma <= T.
+
+    Parameters
+    ----------
+    x : real
+        Point at which to approximate psi(x)
+    T : real
+        Height cutoff
+    prec : int
+        Working precision in bits
+
+    Returns
+    -------
+    Sage real number, truncated classical explicit formula approximation to psi(x)
+    """
+    if T < 0:
+        raise ValueError("T must be nonnegative")
+    gammas = ow.zeta_zeros_up_to_height(T)
+    return explicit_formula_psi_approx_height(x, gammas, prec=prec)
+
+
+
+"""
 print(f"psi(100) = {numerical_approx(chebyshev.chebyshev_psi(100))}")
 for n in [1000,2000,5000,10000]:
     print(f"CEF(100,{n}) = {explicit_formula_psi_approx_first_n(100,n)}")
+"""
 
+x = np.linspace(2,100,1000)
+y1 = [chebyshev.chebyshev_psi(xi) for xi in x]
+y2 = [explicit_formula_psi_approx_first_n(xi, 100) for xi in x]
 
+plt.figure(figsize=(8,5))
+plt.plot(x,y1,label='$psi(x)$', color='blue',linewidth=2)
+plt.plot(x,y2,label='$CEF(100)$',color='red',linewidth=2)
+
+plt.show()
