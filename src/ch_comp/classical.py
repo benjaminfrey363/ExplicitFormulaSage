@@ -177,9 +177,10 @@ for n in [1000,2000,5000,10000]:
 
 start_time = time.perf_counter()
 
-x = np.linspace(2,50,500)
+x = np.linspace(2,1000,10000)
 y1 = [chebyshev.chebyshev_psi(xi) for xi in x]
-y2 = [explicit_formula_psi_approx_first_n(xi, 50) for xi in x]
+gammas = ow.first_zeta_zero_imaginary_parts(100)
+y2 = [explicit_formula_psi_approx(xi, gammas) for xi in x]
 
 plt.figure(figsize=(8,5))
 plt.plot(x,y1,label='$psi(x)$', color='blue',linewidth=2)
