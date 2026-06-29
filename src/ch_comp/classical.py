@@ -1,6 +1,6 @@
 
 """
-Implementation of classical explicit formula for psi(x).EllipticCurve
+Implementation of classical explicit formula for psi(x).
 
 For x > 1 not a prime power,
 
@@ -8,7 +8,7 @@ For x > 1 not a prime power,
         - log(2*pi)
         - (1/2) log(1 - x^{-2}),
     
-where sum runs over nontrivial zeros rho of the Riemann zeta function.EllipticCurve
+where sum runs over nontrivial zeros rho of the Riemann zeta function.
 
 For computational experiments and later comparison to Chirre and Helfgott's explicit
 formula, we truncate the zero sum at a height T such that RH holds for all zeta zeros
@@ -25,6 +25,7 @@ This module is intended for SageMath and requires the odlyzko-zeta zeta zero dat
 from sage.all import RealField, ComplexField, pi, log, numerical_approx
 import matplotlib.pyplot as plt
 import numpy as np
+import time
 
 from ch_comp import odlyzko_wrapper as ow, chebyshev
 
@@ -164,7 +165,7 @@ def explicit_formula_psi_approx_height(x, T, prec=80):
     if T < 0:
         raise ValueError("T must be nonnegative")
     gammas = ow.zeta_zeros_up_to_height(T)
-    return explicit_formula_psi_approx_height(x, gammas, prec=prec)
+    return explicit_formula_psi_approx(x, gammas, prec=prec)
 
 
 
@@ -174,12 +175,19 @@ for n in [1000,2000,5000,10000]:
     print(f"CEF(100,{n}) = {explicit_formula_psi_approx_first_n(100,n)}")
 """
 
-x = np.linspace(2,100,1000)
+start_time = time.perf_counter()
+
+x = np.linspace(2,50,500)
 y1 = [chebyshev.chebyshev_psi(xi) for xi in x]
-y2 = [explicit_formula_psi_approx_first_n(xi, 100) for xi in x]
+y2 = [explicit_formula_psi_approx_first_n(xi, 50) for xi in x]
 
 plt.figure(figsize=(8,5))
 plt.plot(x,y1,label='$psi(x)$', color='blue',linewidth=2)
 plt.plot(x,y2,label='$CEF(100)$',color='red',linewidth=2)
 
 plt.show()
+
+end_time = time.perf_counter()
+
+exec_time = end_time - start_time
+print(f"Elapsed time: {exec_time}")
