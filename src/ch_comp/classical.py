@@ -255,7 +255,53 @@ def compute_cef(n_zeros, lb, ub, n_points, prec=80):
     return exec_time, ys
 
 
+# Approximate L2 distance between 2 functions on pre-specified range xs
+# Take as arg values of fns on this range, y1s and y2s
+def _l2dist_approx(y1s, y2s):
+    if len(y1s) != len(y2s):
+        raise ValueError("Function output arrays must have the same size")
+    return sum([ abs(y1 - y2)**2 for (y1,y2) in zip(y1s,y2s)])
 
+
+
+def cef_error(n_zeros, lb, ub, n_points, prec=80):
+    """
+    Compute L2 error of classical explicit formula vs actual psi(x) on specified range
+
+    Parameters
+    ----------
+    n_zeros : int
+        Number of zeta zeros used in approximation
+    lb : int (for now)
+        Lower bound of range of approximation
+    ub : int (for now)
+        Upper bound of range of approximation
+    n_points : int
+        Number of points sampled in range
+
+    Returns
+    -------
+    error : float
+        Computed error || CEF(x) - psi(x) ||
+    """
+    xs = np.linspace(lb,ub,n_points)
+    psis = [chebyshev.chebyshev_psi(x) for x in xs]
+    gammas = ow.first_zeta_zero_imaginary_parts(n_zeros)
+    cef = ClassicalExplicitFormula(gammas,prec=prec)
+    ys = [cef.psi(x) for x in xs]
+    return numerical_approx(_l2dist_approx(psis, ys),prec)
+
+
+
+print(cef_error(10, 2, 100, 1000))
+print(cef_error(20, 2, 100, 1000))
+print(cef_error(100, 2, 100, 1000))
+print(cef_error(1000, 2, 100, 1000))
+
+
+
+"""
+Demo: compute plot
 
 start_time = time.perf_counter()
 
@@ -275,7 +321,7 @@ end_time = time.perf_counter()
 
 plt.figure(figsize=(8,5))
 plt.plot(x,y1,label="$psi(x)$",color="black",linewidth=2)
-plt.plot(x,y100,label='CEF100', color='blue',linewidth=2)
+plt.plot(x,y100,label='CEF(100)', color='blue',linewidth=2)
 plt.plot(x,y500,label='CEF(500)',color='purple',linewidth=2)
 plt.plot(x,y1000,label='CEF(1000)', color='red',linewidth=2)
 
@@ -283,3 +329,7 @@ plt.show()
 
 exec_time = end_time - start_time
 print(f"Elapsed time: {exec_time}")
+"""
+
+
+
