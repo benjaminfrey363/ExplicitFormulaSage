@@ -171,6 +171,13 @@ def explicit_formula_psi_approx_height(x, T, prec=80):
 
 
 
+
+
+"""
+Class-based refactor
+"""
+
+
 class ClassicalExplicitFormula:
     """
     Evaluator for the truncated classical explicit formula for psi(x).
