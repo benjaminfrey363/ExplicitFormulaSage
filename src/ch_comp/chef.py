@@ -2,7 +2,7 @@
 """
 Implementation of Chirre and Helfgott's EF for psi(x)/x
 
-    psi(x)/x = (pi/T) coth (pi/T) + (pi/T) sum_k (2 pi k/ T) x^{-2k-1}
+    psi(x)/x = (pi/T) coth (pi/T) - log(2pi)/x + (pi/T) sum_k (2 pi k/ T) x^{-2k-1}
     - 2pi/T Im ( sum_rho m_rho omega_T^+(rho) x^{rho - 1} )
     + Error term
 
@@ -16,9 +16,10 @@ Sum over k tends to  -(1/2) log(1 - x^{-2}) for T large, and first term
 (pi/T) coth(pi/T) tends to 1 for T large
 """
 
-from sage.all import RealField, ComplexField, I, cot, pi, coth, numerical_approx
+from sage.all import RealField, ComplexField, cot, pi, coth, numerical_approx, log
 from ch_comp import odlyzko_wrapper as ow, chebyshev
-
+import time, numpy as np
+import matplotlib.pyplot as plt
 
 def _validate_x(x):
     """
@@ -34,21 +35,41 @@ For the specialization to Chebyshev, we will always have sigma = 0,
 except for a theta_{T,1} term in error (not used atp)
 """
 
-def theta_Tsigma(T, sigma):
+def theta_Tsigma(T, sigma, prec=80):
+    R = RealField(prec)
+    C = ComplexField(prec)
+
+    T = R(T)
+    sigma = R(sigma)
+    I = C.gen()
+
+    if T <= 0:
+        raise ValueError("T must be positive")
+
     def theta(s):
-        return 1 - (s - sigma)/(I*T)
+        s = C(s)
+        return C(1) - (s - C(sigma))/(I*C(T))
     return theta
 
-def c_Tsigma(T, sigma):
-    theta = theta_Tsigma(T,sigma)
-    theta_eval = theta(1 + I*T)
-    return theta_eval * cot(pi * theta_eval)
+def c_Tsigma(T, sigma, prec=80):
+    R = RealField(prec)
+    C = ComplexField(prec)
 
-def omega_plus_Tsigma(T, sigma):
-    theta = theta_Tsigma(T,sigma)
-    c = c_Tsigma(T,sigma)
+    theta = theta_Tsigma(T,sigma, prec=prec)
+    T = R(T); I = C.gen()
+    theta_eval = theta(C(1) + I*C(T))
+    return theta_eval * cot(C(pi) * theta_eval)
+
+def omega_plus_Tsigma(T, sigma, prec=80):
+    C = ComplexField(prec)
+
+    theta = theta_Tsigma(T,sigma,prec=prec)
+    c = c_Tsigma(T,sigma,prec=prec)
+
     def omega(s):
-        return (-1)*theta(s)*cot(pi*theta(s)) + c
+        z = theta(s)
+        return -z * cot(C(pi) * z) + c
+    
     return omega
 
 
@@ -56,8 +77,10 @@ def omega_plus_Tsigma(T, sigma):
 First term (pi/T) coth (pi/T)
 """
 
-def coth_term_T(T):
-    return (pi/T) * coth(pi/T)
+def coth_term_T(T, prec=80):
+    R = RealField(prec)
+    T = R(T)
+    return (R(pi) / T) * coth(R(pi) / T)
 
 
 """
@@ -66,10 +89,16 @@ Specify truncation height of infinite sum, could later replace with limit
 Return log term, a function of x
 """
 
-def logterm_TN(T, N):
+def logterm_TN(T, N, prec=80):
+    R = RealField(prec)
+    T = R(T)
+
     def logterm(x):
-        truncated_sum = sum([(2*pi*k/T)*(x**(-2*k - 1)) for k in range(1,N+1)])
-        return (pi/T)*truncated_sum
+        x = R(x)
+        return (R(pi) / T) * sum(
+            (2 * R(pi) * R(k) / T) * x ** (-2 * k - 1)
+            for k in range(1, N + 1)
+        )
     return logterm
 
 
@@ -87,19 +116,30 @@ class CHExplicitFormula:
 
         self.half = self.R(1) / self.R(2)
 
+        self.T = self.R(T)
+        self.N = N
+        if self.T <= 0:
+            raise ValueError("T must be positive")
         self.gammas = [self.R(gamma) for gamma in gammas]
-        self.T = T
+        if self.gammas and max(self.gammas) > self.T:
+            raise ValueError(
+                f"Received a zero with gamma={max(self.gammas)} > T={self.T}. "
+                "For the height-T formula, pass only zeros with gamma <= T."
+            )
+
         # Pre-compute weights and main terms
         self.omega = omega_plus_Tsigma(T,0)
         self.coth_term = coth_term_T(T)
         self.log_term = logterm_TN(T,N)     # function of x
+        self.constant_correction = -log(2 * self.R(pi))
+
         self.rhos = [self.C(self.half, gamma) for gamma in self.gammas]
 
     def psi(self, x):
         """
         Evaluate CEF, truncated at height T, at one x.
 
-        psi(x)/x = (pi/T) coth (pi/T) + ((pi/T) sum_k (2 pi k/ T) x^{-2k-1})
+        psi(x)/x = (pi/T) coth (pi/T) - log(2pi)/x + ((pi/T) sum_k (2 pi k/ T) x^{-2k-1})
         - 2pi/T Im ( sum_rho m_rho omega_T^+(rho) x^{rho - 1} )
 
         Compute approximation of psi(x)/x and multiply by x
@@ -115,22 +155,131 @@ class CHExplicitFormula:
         main_term = self.coth_term + self.log_term(x)
 
         form = main_term + zero_term
-        return x*form
+        return x*form + self.constant_correction
     
 
-gammas = ow.zeta_zeros_up_to_height(100)
-cef = CHExplicitFormula(gammas, 100, 100)
-print(numerical_approx(cef.psi(100),80))
-print(numerical_approx(chebyshev.chebyshev_psi(100),80))
 
-gammas = ow.zeta_zeros_up_to_height(1000)
-cef = CHExplicitFormula(gammas, 1000, 100)
-print(numerical_approx(cef.psi(100),80))
-print(numerical_approx(chebyshev.chebyshev_psi(100),80))
 
+# Approximate L2 distance between 2 functions on pre-specified range xs
+# Take as arg values of fns on this range, y1s and y2s
+def _l2dist_approx(y1s, y2s):
+    if len(y1s) != len(y2s):
+        raise ValueError("Function output arrays must have the same size")
+    return sum([ abs(y1 - y2)**2 for (y1,y2) in zip(y1s,y2s)])
 
 
 
+
+def compute_chef_T(T, lb, ub, n_points, prec=80):
+    """
+    Evaluate truncated CH explicit formula for psi(x) on range of points
+    Optimized to reduce redundant construction of fields and loading of zeros
+
+    Parameters
+    ----------
+    T : float >= 0
+        Truncation height, load zeros below this positive height
+    lb : int (for now)
+        Lower bound of range of approximation
+    ub : int (for now)
+        Upper bound of range of approximation
+    n_points : int
+        Number of points sampled in range
+
+    Returns
+    -------
+    exec_time : float
+        Execution time
+    xs : list of floats
+        Range of input values
+    ys : list of sage real numbers
+        CHEF(T, x) for x in range
+    """
+    # Start timer
+    start_time = time.perf_counter()
+
+    # construct range
+    xs = np.linspace(lb, ub, n_points)
+    
+    # load zeros
+    gammas = ow.zeta_zeros_up_to_height(T)
+    # for now hardcode
+    N = 1000
+    # construct CEF and compute
+    cef = CHExplicitFormula(gammas, T, N, prec=prec)
+    ys = [cef.psi(x) for x in xs]
+
+    # stop timer
+    end_time = time.perf_counter()
+    exec_time = end_time - start_time
+    
+    return exec_time, xs, ys
+
+
+
+
+# Wrapper to make consistent with classical EF, pass n_zeros rather than
+# truncation height T
+def compute_chef(n_zeros, lb, ub, n_points, prec=80):
+    """
+    Evaluate truncated CH explicit formula for psi(x) on range of points
+    Optimized to reduce redundant construction of fields and loading of zeros
+
+    Parameters
+    ----------
+    n_zeros : int
+        Number of zeta zeros used in approximation
+    lb : int (for now)
+        Lower bound of range of approximation
+    ub : int (for now)
+        Upper bound of range of approximation
+    n_points : int
+        Number of points sampled in range
+
+    Returns
+    -------
+    exec_time : float
+        Execution time
+    xs : list of floats
+        Range of input values
+    ys : list of sage real numbers
+        CHEF(T, x) for x in range
+    """
+    # Start timer
+    start_time = time.perf_counter()
+
+    # construct range
+    xs = np.linspace(lb, ub, n_points)
+    
+    # load zeros
+    gammas = ow.first_zeta_zero_imaginary_parts(n_zeros)
+    T = max(gammas)
+    # for now hardcode
+    N = 1000
+    # construct CEF and compute
+    cef = CHExplicitFormula(gammas, T, N, prec=prec)
+    ys = [cef.psi(x) for x in xs]
+
+    # stop timer
+    end_time = time.perf_counter()
+    exec_time = end_time - start_time
+    
+    return exec_time, xs, ys
+
+
+
+
+
+
+exec_time, xs, ys = compute_chef(1000,2,100,1000)
+
+psis = [chebyshev.chebyshev_psi(x) for x in xs]
+
+plt.figure(figsize=(8,5))
+plt.plot(xs,psis,label="psi(x)",color="black",linewidth=2)
+plt.plot(xs,ys,label="CHEF(1000)",color="red",linewidth=2)
+
+plt.show()
 
 
 

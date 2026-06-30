@@ -259,7 +259,7 @@ def compute_cef(n_zeros, lb, ub, n_points, prec=80):
     end_time = time.perf_counter()
     exec_time = end_time - start_time
     
-    return exec_time, ys
+    return exec_time, xs, ys
 
 
 # Approximate L2 distance between 2 functions on pre-specified range xs
