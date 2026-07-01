@@ -227,7 +227,7 @@ def compute_chef_T(T, lb, ub, n_points, scale="linear", prec=80):
 
 # Wrapper to make consistent with classical EF, pass n_zeros rather than
 # truncation height T
-def compute_chef(n_zeros, lb, ub, n_points, prec=80):
+def compute_chef(n_zeros, lb, ub, n_points, scale="linear", prec=80):
     """
     Evaluate truncated CH explicit formula for psi(x) on range of points
     Optimized to reduce redundant construction of fields and loading of zeros
@@ -242,6 +242,8 @@ def compute_chef(n_zeros, lb, ub, n_points, prec=80):
         Upper bound of range of approximation
     n_points : int
         Number of points sampled in range
+    scale : "linear" || "log"
+        Scale at which to sample points
 
     Returns
     -------
@@ -256,7 +258,12 @@ def compute_chef(n_zeros, lb, ub, n_points, prec=80):
     start_time = time.perf_counter()
 
     # construct range
-    xs = np.linspace(lb, ub, n_points)
+    if scale not in ["linear", "log"]:
+        raise ValueError("scale must be linear or log.")
+    if scale == "linear":
+        xs = np.linspace(lb, ub, n_points)
+    else:
+        xs = np.logspace(np.log10(lb), np.log10(ub), n_points)
     
     # load zeros
     gammas = ow.first_zeta_zero_imaginary_parts(n_zeros)
