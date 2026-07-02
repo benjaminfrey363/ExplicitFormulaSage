@@ -134,5 +134,7 @@ def full_test_suite():
 
     # cef_low_overlay.png
     # plot of psi(x) and CEF_n(x) for n in [100, 500, 1000, 5000] on the low range.
-    
+    lb = 2; ub = 500; n_points = 1000; scale="linear"
+    approximations = []
+    labels = []
 
