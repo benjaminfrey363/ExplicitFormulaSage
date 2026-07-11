@@ -660,8 +660,9 @@ RUN TEST SUITE
 """
 
 def run_test_suite(
-    number_random_samples=1000,
+    number_random_samples=10000,
     output_file="output/lemma_c5_samples.csv",
+    seed=2026,
 ):
     print("Generating deterministic boundary samples...")
     parameters = boundary_parameters()
@@ -676,20 +677,17 @@ def run_test_suite(
             eta_max=R(e),
             c_min=R("4"),
             c_max=R("40"),
-            seed=2026,
+            seed=seed,
         )
     )
 
     print(f"Evaluating {len(parameters)} total samples...")
-    results = evaluate_samples(
-        parameters,
-        progress_every=100,
-    )
+    results = evaluate_samples(parameters, progress_every=500)
 
-    report_results(
-        results,
-        number_extreme_points=5,
-    )
+    report_results(results, number_extreme_points=5)
+    report_by_beta(results)
+    report_by_eta(results)
+    report_by_c(results)
 
     write_results_csv(results, output_file)
 
@@ -697,11 +695,16 @@ def run_test_suite(
 
 
 if __name__ == "__main__":
-    results = run_test_suite(
-        number_random_samples=1000,
-        output_file="output/lemma_c5_samples.csv",
-    )
-    # Report by case
-    report_by_beta(results)
-    report_by_eta(results)
-    report_by_c(results)
+    for seed in [1234, 4321, 2143]:
+        print()
+        print("#" * 80)
+        print(f"RUN WITH SEED {seed}")
+        print("#" * 80)
+
+        results = run_test_suite(
+            number_random_samples=10000,
+            output_file=f"output/lemma_c5_samples_seed_{seed}.csv",
+            seed=seed,
+        )
+
+
