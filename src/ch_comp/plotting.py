@@ -137,4 +137,6 @@ def full_test_suite():
     lb = 2; ub = 500; n_points = 1000; scale="linear"
     approximations = []
     labels = []
+    for n_zeros in [1,500,1000,5000]:
+        
 

@@ -23,6 +23,7 @@ tests/                 Basic tests
 docs/                  Project notes and task planning
 ```
 
+
 ## Setting up odlyzko-zeta:
 
 To install database of zeta zeros, on mac/linux use:
@@ -83,7 +84,12 @@ sage: zeta_zeros_up_to_height(40)
 ```
 
 
-## Example usage of sr/ch-framework
+## Example usage of src/ch_comp
+
+ch_comp contains practical and "optimized" implementations of Chirre and Helfgott's explicit formula and the classical explicit formula, tests to compare the runtime and approximation error of the two compared to actual values of $\psi(x)$, and plotting functions.
+
+
+## Example usage of src/ch-framework
 
 ch-framework contains implementations of the framework described in Chirre and Helfgott's paper "Optimal bounds for the sums of nonnegative arithmetic functions".
 This includes an implementation of Chirre and Helfgott's Perron-type formula, smooth sum identity, integral bounds, contour shift, and full explicit formula.
