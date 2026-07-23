@@ -6,7 +6,8 @@ import matplotlib.pyplot as plt
 from sage.all import (
     ComplexField,
     RealField,
-    zeta_zeros
+    zeta_zeros,
+    log
 )
 
 
@@ -283,7 +284,7 @@ def compute_weight_comparison(n, T, xi):
 
 
 """
-PLOTTING
+PLOTTING FOR POINTWISE WEIGHTS
 """
 
 def plot_weight_comparison(
@@ -589,10 +590,388 @@ def plot_relative_error_components(
 
 
 
+
 """
-MAIN
+PARTIAL SUM COMPUTATION
 """
 
+def compute_normalized_partial_sums(
+    zeros,
+    T_values,
+    xi,
+):
+    """
+    Compute normalized CH partial sums for a fixed set of zeros
+    over several truncation heights.
+
+    Parameters
+    ----------
+    zeros : list
+        Complex zeros rho = 1/2 + i*gamma.
+    T_values : iterable
+        Truncation heights. Each T must exceed every sampled ordinate.
+    xi :
+        Parameter in [-1, 1].
+
+    Returns
+    -------
+    list[dict]
+        One record for each truncation height.
+    """
+    if not zeros:
+        raise ValueError("zeros must be nonempty")
+
+    xi = RF(xi)
+
+    if not (-1 <= xi <= 1):
+        raise ValueError("xi must lie in [-1, 1]")
+
+    largest_gamma = max(RF(rho.imag()) for rho in zeros)
+    records = []
+
+    for T_value in T_values:
+        T = RF(T_value)
+
+        if T <= largest_gamma:
+            raise ValueError(
+                f"Each T must exceed the largest sampled ordinate "
+                f"{largest_gamma}; received T={T}."
+            )
+
+        exact_weight = ch_weight_T_xi(T, xi)
+        simplified_weight = ch_simplified_weight_T_xi(T, xi)
+        upper_bound_131 = ch_131_upper_bound_T_xi(T, xi)
+
+        exact_sum = RF(0)
+        simplified_sum = RF(0)
+        upper_sum = RF(0)
+
+        for rho in zeros:
+            exact_sum += exact_weight(rho)
+            simplified_sum += simplified_weight(rho)
+            upper_sum += upper_bound_131(rho)
+
+        normalization = 2 * PI_NUM / T
+
+        normalized_exact = normalization * exact_sum
+        normalized_simplified = normalization * simplified_sum
+        normalized_upper = normalization * upper_sum
+
+        records.append(
+            {
+                "T": T,
+                "T_over_gamma_max": T / largest_gamma,
+                "exact": normalized_exact,
+                "simplified": normalized_simplified,
+                "upper_131": normalized_upper,
+                "simp_relative_error": (
+                    normalized_simplified - normalized_exact
+                ) / normalized_exact,
+                "upper_relative_gap": (
+                    normalized_upper - normalized_exact
+                ) / normalized_exact,
+            }
+        )
+
+    return records
+
+
+
+"""
+PARTIAL SUM PLOTTING
+"""
+
+def plot_normalized_partial_sums(
+    records,
+    n,
+    xi,
+    output_path=None,
+    show=True,
+):
+    """
+    Plot normalized exact, simplified, and equation (131)
+    partial sums as T varies.
+    """
+    if not records:
+        raise ValueError("records must be nonempty")
+
+    x_values = [
+        float(
+            log(record["T_over_gamma_max"])
+            / log(RF(10))
+        )
+        for record in records
+    ]
+
+    exact_values = [
+        float(record["exact"])
+        for record in records
+    ]
+    simplified_values = [
+        float(record["simplified"])
+        for record in records
+    ]
+    upper_values = [
+        float(record["upper_131"])
+        for record in records
+    ]
+
+    figure, axis = plt.subplots(figsize=(10, 6))
+
+    axis.plot(
+        x_values,
+        exact_values,
+        marker="o",
+        label=r"$Z_N^{\mathrm{exact}}(T)$",
+    )
+    axis.plot(
+        x_values,
+        simplified_values,
+        marker="o",
+        label=r"$Z_N^{\mathrm{simp}}(T)$",
+    )
+    axis.plot(
+        x_values,
+        upper_values,
+        marker="o",
+        label=r"$Z_N^{131}(T)$",
+    )
+
+    axis.set_xlabel(
+        r"$\log_{10}(T/\gamma_N)$"
+    )
+    axis.set_ylabel(
+        r"Normalized partial sum $\frac{2\pi}{T}\sum W$"
+    )
+    axis.set_title(
+        "Normalized CH partial sums as T varies\n"
+        f"First {n} zeros, xi={float(xi):.6g}"
+    )
+    axis.grid(True, alpha=0.3)
+    axis.legend()
+    figure.tight_layout()
+
+    if output_path is not None:
+        output_path = Path(output_path)
+        output_path.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+        figure.savefig(
+            output_path,
+            dpi=300,
+            bbox_inches="tight",
+        )
+        print(f"Saved plot to {output_path}")
+
+    if show:
+        plt.show()
+    else:
+        plt.close(figure)
+
+
+def plot_normalized_sum_relative_gaps(
+    records,
+    n,
+    xi,
+    output_path=None,
+    show=True,
+):
+    """
+    Plot relative errors of the simplified and equation (131)
+    normalized partial sums.
+    """
+    if not records:
+        raise ValueError("records must be nonempty")
+
+    x_values = [
+        float(log(record["T_over_gamma_max"], 10))
+        for record in records
+    ]
+
+    simp_gaps = [
+        float(record["simp_relative_error"])
+        for record in records
+    ]
+    upper_gaps = [
+        float(record["upper_relative_gap"])
+        for record in records
+    ]
+
+    figure, axis = plt.subplots(figsize=(10, 6))
+
+    axis.plot(
+        x_values,
+        simp_gaps,
+        marker="o",
+        label=(
+            r"$(Z_N^{\mathrm{simp}}-"
+            r"Z_N^{\mathrm{exact}})/Z_N^{\mathrm{exact}}$"
+        ),
+    )
+    axis.plot(
+        x_values,
+        upper_gaps,
+        marker="o",
+        label=(
+            r"$(Z_N^{131}-"
+            r"Z_N^{\mathrm{exact}})/Z_N^{\mathrm{exact}}$"
+        ),
+    )
+
+    axis.axhline(
+        0,
+        linewidth=1,
+        linestyle="--",
+    )
+
+    axis.set_xlabel(
+        r"$\log_{10}(T/\gamma_N)$"
+    )
+    axis.set_ylabel("Relative error")
+    axis.set_title(
+        "Relative gaps in normalized CH partial sums\n"
+        f"First {n} zeros, xi={float(xi):.6g}"
+    )
+    axis.grid(True, alpha=0.3)
+    axis.legend()
+    figure.tight_layout()
+
+    if output_path is not None:
+        output_path = Path(output_path)
+        output_path.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+        figure.savefig(
+            output_path,
+            dpi=300,
+            bbox_inches="tight",
+        )
+        print(f"Saved plot to {output_path}")
+
+    if show:
+        plt.show()
+    else:
+        plt.close(figure)
+
+
+
+def reciprocal_square_limit(zeros):
+    """
+    Compute the predicted limiting normalized gap
+
+        sum 1/gamma^2
+
+    for zeros rho = 1/2 + i*gamma.
+    """
+    return sum(
+        RF(1) / RF(rho.imag())**2
+        for rho in zeros
+    )
+
+
+
+
+
+n = 1000
+xi = RF(1)
+
+zeros = load_rh_zeros(n)
+gamma_max = RF(zeros[-1].imag())
+
+scale_factors = [
+    RF("1.01"),
+    RF("1.1"),
+    RF(2),
+    RF(10),
+    RF(100),
+    RF(10**4),
+    RF(10**8),
+]
+
+T_values = [
+    factor * gamma_max
+    for factor in scale_factors
+]
+
+records = compute_normalized_partial_sums(
+    zeros=zeros,
+    T_values=T_values,
+    xi=xi,
+)
+
+print(
+    "\n"
+    "NORMALIZED PARTIAL SUMS\n"
+    "-----------------------"
+)
+
+for record in records:
+    print(
+        f"T/gamma_max={float(record['T_over_gamma_max']):>12.5g}  "
+        f"exact={float(record['exact']):>14.8g}  "
+        f"simp={float(record['simplified']):>14.8g}  "
+        f"upper={float(record['upper_131']):>14.8g}  "
+        f"upper gap={float(record['upper_relative_gap']):>12.5g}"
+    )
+
+
+predicted_gap = reciprocal_square_limit(zeros)
+
+last_record = records[-1]
+observed_gap = (
+    last_record["upper_131"]
+    - last_record["exact"]
+)
+
+print("\nASYMPTOTIC GAP CHECK")
+print("--------------------")
+print(f"Observed gap at largest T: {observed_gap}")
+print(f"Predicted sum 1/gamma^2:   {predicted_gap}")
+print(f"Difference:                {observed_gap - predicted_gap}")
+
+predicted_relative_gap = (
+    predicted_gap / last_record["exact"]
+)
+
+print(
+    f"Observed relative gap:  "
+    f"{last_record['upper_relative_gap']}"
+)
+print(
+    f"Predicted relative gap: "
+    f"{predicted_relative_gap}"
+)
+
+
+"""
+plot_normalized_partial_sums(
+    records=records,
+    n=n,
+    xi=xi,
+    output_path="output/ch_normalized_partial_sums.png",
+    show=True,
+)
+
+
+plot_normalized_sum_relative_gaps(
+    records=records,
+    n=n,
+    xi=xi,
+    output_path="output/ch_normalized_partial_sum_gaps.png",
+    show=True,
+)
+"""
+
+
+
+
+"""
+MAIN (DECOMP PLOTTING)
+"""
+
+"""
 tolerance = RF("1e-20")
 
 if __name__ == "__main__":
@@ -625,6 +1004,9 @@ if __name__ == "__main__":
         output_path="output/ch_weight_ratios.png",
         show=True,
     )
+"""
+
+
 
 
 
