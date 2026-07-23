@@ -263,6 +263,8 @@ def compute_weight_comparison(n, T, xi):
                 "simp_minus_exact": simplified - exact,
                 "upper_minus_exact": upper - exact,
                 "upper_minus_simp": upper - simplified,
+                "simp_relative_error": simplified / exact - 1,
+                "upper_relative_error": upper / exact - 1,
             }
         )
 
@@ -421,6 +423,79 @@ def plot_weight_gaps(
         plt.close(figure)
 
 
+def plot_weight_ratios(
+    records,
+    T,
+    xi,
+    output_path=None,
+    show=True,
+):
+    """
+    Plot the simplified and equation (131) weights relative
+    to the exact CH weight.
+    """
+    if not records:
+        raise ValueError("records must be nonempty")
+
+    gammas = [float(record["gamma"]) for record in records]
+
+    simp_over_exact = [
+        float(record["simp_relative_error"])
+        for record in records
+    ]
+    upper_over_exact = [
+        float(record["upper_relative_error"])
+        for record in records
+    ]
+
+    figure, axis = plt.subplots(figsize=(10, 6))
+
+    axis.plot(
+        gammas,
+        simp_over_exact,
+        label=r"$(W_{\mathrm{simp}} - W_{\mathrm{exact}})/W_{\mathrm{exact}}$",
+        linewidth=1.5,
+    )
+    axis.plot(
+        gammas,
+        upper_over_exact,
+        label=r"$(W_{131} - W_{\mathrm{exact}})/W_{\mathrm{exact}}$",
+        linewidth=1.5,
+    )
+
+    axis.axhline(
+        0,
+        linewidth=1,
+        linestyle="--",
+        label="Exact agreement",
+    )
+
+    axis.set_xlabel(r"Zero ordinate $\gamma$")
+    axis.set_ylabel("Ratio to exact weight")
+    axis.set_title(
+        "CH Lemma 7.2 pointwise weight ratios\n"
+        f"First {len(records)} zeros, "
+        f"T={float(T):.6g}, xi={float(xi):.6g}"
+    )
+    axis.grid(True, alpha=0.3)
+    axis.legend()
+    figure.tight_layout()
+
+    if output_path is not None:
+        output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        figure.savefig(
+            output_path,
+            dpi=300,
+            bbox_inches="tight",
+        )
+        print(f"Saved plot to {output_path}")
+
+    if show:
+        plt.show()
+    else:
+        plt.close(figure)
+
 
 
 
@@ -431,7 +506,7 @@ MAIN
 tolerance = RF("1e-20")
 
 if __name__ == "__main__":
-    n = 1000
+    n = 10000
     xi = RF(1)
 
     zeros = load_rh_zeros(n)
@@ -453,11 +528,11 @@ if __name__ == "__main__":
     for record in records:
         assert record["upper_minus_exact"] >= -tolerance
 
-    plot_weight_gaps(
+    plot_weight_ratios(
         records=records,
         T=T,
         xi=xi,
-        output_path="output/ch_weight_gaps.png",
+        output_path="output/ch_weight_ratios.png",
         show=True,
     )
 
