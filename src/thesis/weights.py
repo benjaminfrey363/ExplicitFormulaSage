@@ -7,7 +7,8 @@ from sage.all import (
     ComplexField,
     RealField,
     zeta_zeros,
-    log
+    log,
+    sqrt,
 )
 
 
@@ -943,6 +944,61 @@ print(
     f"Predicted relative gap: "
     f"{predicted_relative_gap}"
 )
+
+
+def simplified_exact_limit_gap(zeros):
+    """
+    Limiting normalized gap between the simplified and exact
+    CH weights on RH:
+
+        2 * sum(1/gamma - 1/sqrt(gamma^2 + 1/4)).
+    """
+    half = RF(1) / 2
+
+    return 2 * sum(
+        RF(1) / RF(rho.imag())
+        - RF(1) / sqrt(RF(rho.imag())**2 + half**2)
+        for rho in zeros
+    )
+
+
+def upper_exact_limit_gap(zeros):
+    """
+    Predicted limiting normalized gap between equation (131)
+    and the exact CH weight.
+    """
+    return (
+        reciprocal_square_limit(zeros)
+        + simplified_exact_limit_gap(zeros)
+    )
+
+
+reciprocal_gap = reciprocal_square_limit(zeros)
+main_weight_gap = simplified_exact_limit_gap(zeros)
+predicted_total_gap = upper_exact_limit_gap(zeros)
+
+last_record = records[-1]
+observed_total_gap = (
+    last_record["upper_131"]
+    - last_record["exact"]
+)
+
+print("\nCORRECTED ASYMPTOTIC GAP CHECK")
+print("------------------------------")
+print(f"Observed total gap:        {observed_total_gap}")
+print(f"Reciprocal-square gap:     {reciprocal_gap}")
+print(f"Simplified-exact gap:      {main_weight_gap}")
+print(f"Predicted total gap:       {predicted_total_gap}")
+print(f"Residual:                  {observed_total_gap - predicted_total_gap}")
+
+predicted_relative_gap = (
+    predicted_total_gap / last_record["exact"]
+)
+
+print(f"Observed relative gap:     {last_record['upper_relative_gap']}")
+print(f"Predicted relative gap:    {predicted_relative_gap}")
+
+
 
 
 """
