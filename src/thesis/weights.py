@@ -260,6 +260,9 @@ def compute_weight_comparison(n, T, xi):
                 "exact": exact,
                 "simplified": simplified,
                 "upper_131": upper,
+                "simp_minus_exact": simplified - exact,
+                "upper_minus_exact": upper - exact,
+                "upper_minus_simp": upper - simplified,
             }
         )
 
@@ -343,11 +346,89 @@ def plot_weight_comparison(
 
 
 
+def plot_weight_gaps(
+    records,
+    T,
+    xi,
+    output_path=None,
+    show=True,
+):
+    """
+    Plot the additive gaps between the exact, simplified,
+    and equation (131) weights.
+    """
+    if not records:
+        raise ValueError("records must be nonempty")
+
+    gammas = [float(record["gamma"]) for record in records]
+
+    simp_minus_exact = [
+        float(record["simp_minus_exact"])
+        for record in records
+    ]
+    upper_minus_exact = [
+        float(record["upper_minus_exact"])
+        for record in records
+    ]
+    upper_minus_simp = [
+        float(record["upper_minus_simp"])
+        for record in records
+    ]
+
+    figure, axis = plt.subplots(figsize=(10, 6))
+
+    axis.plot(
+        gammas,
+        simp_minus_exact,
+        label=r"$W_{\mathrm{simp}}-W_{\mathrm{exact}}$",
+        linewidth=1.5,
+    )
+    axis.plot(
+        gammas,
+        upper_minus_exact,
+        label=r"$W_{131}-W_{\mathrm{exact}}$",
+        linewidth=1.5,
+    )
+    axis.plot(
+        gammas,
+        upper_minus_simp,
+        label=r"$W_{131}-W_{\mathrm{simp}}$",
+        linewidth=1.5,
+    )
+
+    axis.axhline(0, linewidth=1)
+
+    axis.set_xlabel(r"Zero ordinate $\gamma$")
+    axis.set_ylabel("Additive gap")
+    axis.set_title(
+        "CH Lemma 7.2 pointwise additive gaps\n"
+        f"First {len(records)} zeros, T={float(T):.6g}, "
+        f"xi={float(xi):.6g}"
+    )
+    axis.grid(True, alpha=0.3)
+    axis.legend()
+    figure.tight_layout()
+
+    if output_path is not None:
+        output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        figure.savefig(output_path, dpi=300, bbox_inches="tight")
+        print(f"Saved plot to {output_path}")
+
+    if show:
+        plt.show()
+    else:
+        plt.close(figure)
+
+
+
 
 
 """
 MAIN
 """
+
+tolerance = RF("1e-20")
 
 if __name__ == "__main__":
     n = 1000
@@ -370,14 +451,13 @@ if __name__ == "__main__":
     )
 
     for record in records:
-        tolerance = RF("1e-20")
-        assert record["exact"] <= record["upper_131"] + tolerance
+        assert record["upper_minus_exact"] >= -tolerance
 
-    plot_weight_comparison(
+    plot_weight_gaps(
         records=records,
         T=T,
         xi=xi,
-        output_path="output/ch_weight_comparison.png",
+        output_path="output/ch_weight_gaps.png",
         show=True,
     )
 
