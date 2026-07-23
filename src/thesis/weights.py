@@ -266,3 +266,120 @@ def compute_weight_comparison(n, T, xi):
     return records
 
 
+
+
+"""
+PLOTTING
+"""
+
+def plot_weight_comparison(
+    records,
+    T,
+    xi,
+    output_path=None,
+    show=True,
+):
+    """
+    Plot exact, simplified, and equation (131) CH weights
+    against the zero ordinate gamma.
+    """
+    if not records:
+        raise ValueError("records must be nonempty")
+
+    gammas = [float(record["gamma"]) for record in records]
+    exact = [float(record["exact"]) for record in records]
+    simplified = [
+        float(record["simplified"])
+        for record in records
+    ]
+    upper_131 = [
+        float(record["upper_131"])
+        for record in records
+    ]
+
+    figure, axis = plt.subplots(figsize=(10, 6))
+
+    axis.plot(
+        gammas,
+        exact,
+        label="Exact CH weight",
+        linewidth=1.5,
+    )
+    axis.plot(
+        gammas,
+        simplified,
+        label="Simplified weight",
+        linewidth=1.5,
+    )
+    axis.plot(
+        gammas,
+        upper_131,
+        label="Equation (131) upper bound",
+        linewidth=1.5,
+    )
+
+    axis.set_xlabel(r"Zero ordinate $\gamma$")
+    axis.set_ylabel("Pointwise weight")
+    axis.set_title(
+        "CH Lemma 7.2 pointwise weight comparison\n"
+        f"First {len(records)} zeros, T={float(T):g}, "
+        f"xi={float(xi):g}"
+    )
+    axis.grid(True, alpha=0.3)
+    axis.legend()
+    figure.tight_layout()
+
+    if output_path is not None:
+        output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        figure.savefig(output_path, dpi=300, bbox_inches="tight")
+        print(f"Saved plot to {output_path}")
+
+    if show:
+        plt.show()
+    else:
+        plt.close(figure)
+
+
+
+
+
+
+"""
+MAIN
+"""
+
+if __name__ == "__main__":
+    n = 1000
+    xi = RF(1)
+
+    zeros = load_rh_zeros(n)
+    largest_gamma = zeros[-1].imag()
+
+    # Give some room between the final sampled zero and T.
+    T = RF("1.1") * largest_gamma
+
+    print(f"Loaded {n} zeros")
+    print(f"Largest ordinate: {largest_gamma}")
+    print(f"Using T: {T}")
+
+    records = compute_weight_comparison(
+        n=n,
+        T=T,
+        xi=xi,
+    )
+
+    for record in records:
+        tolerance = RF("1e-20")
+        assert record["exact"] <= record["upper_131"] + tolerance
+
+    plot_weight_comparison(
+        records=records,
+        T=T,
+        xi=xi,
+        output_path="output/ch_weight_comparison.png",
+        show=True,
+    )
+
+
+
