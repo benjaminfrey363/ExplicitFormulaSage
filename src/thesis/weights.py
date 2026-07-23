@@ -253,6 +253,9 @@ def compute_weight_comparison(n, T, xi):
         simplified = RF(simplified_weight(rho))
         upper = RF(upper_bound_131(rho))
 
+        reciprocal_square_error = T / (2 * PI_NUM * gamma**2)
+        constant_order_error = RF("2.39") / T
+
         records.append(
             {
                 "index": index,
@@ -264,7 +267,13 @@ def compute_weight_comparison(n, T, xi):
                 "upper_minus_exact": upper - exact,
                 "upper_minus_simp": upper - simplified,
                 "simp_relative_error": simplified / exact - 1,
-                "upper_relative_error": upper / exact - 1,
+                "upper_relative_gap": upper / exact - 1,
+                "reciprocal_relative_gap": (
+                    reciprocal_square_error / exact
+                ),
+                "constant_relative_gap": (
+                    constant_order_error / exact
+                ),
             }
         )
 
@@ -444,7 +453,7 @@ def plot_weight_ratios(
         for record in records
     ]
     upper_over_exact = [
-        float(record["upper_relative_error"])
+        float(record["upper_relative_gap"])
         for record in records
     ]
 
@@ -497,6 +506,87 @@ def plot_weight_ratios(
         plt.close(figure)
 
 
+def plot_relative_error_components(
+    records,
+    T,
+    xi,
+    output_path=None,
+    show=True,
+):
+    """
+    Decompose the relative gap in equation (131) into its
+    reciprocal-square and constant-order components.
+    """
+    if not records:
+        raise ValueError("records must be nonempty")
+
+    gammas = [
+        float(record["gamma"])
+        for record in records
+    ]
+    total_gap = [
+        float(record["upper_relative_gap"])
+        for record in records
+    ]
+    reciprocal_gap = [
+        float(record["reciprocal_relative_gap"])
+        for record in records
+    ]
+    constant_gap = [
+        float(record["constant_relative_gap"])
+        for record in records
+    ]
+
+    figure, axis = plt.subplots(figsize=(10, 6))
+
+    axis.plot(
+        gammas,
+        total_gap,
+        label=r"Total relative gap",
+        linewidth=1.5,
+    )
+    axis.plot(
+        gammas,
+        reciprocal_gap,
+        label=r"$\frac{T}{2\pi\gamma^2W_{\rm exact}}$",
+        linewidth=1.5,
+    )
+    axis.plot(
+        gammas,
+        constant_gap,
+        label=r"$\frac{2.39}{T W_{\rm exact}}$",
+        linewidth=1.5,
+    )
+
+    axis.set_xlabel(r"Zero ordinate $\gamma$")
+    axis.set_ylabel("Relative contribution")
+    axis.set_title(
+        "Equation (131) relative error decomposition\n"
+        f"First {len(records)} zeros, "
+        f"T={float(T):.6g}, xi={float(xi):.6g}"
+    )
+    axis.grid(True, alpha=0.3)
+    axis.legend()
+    figure.tight_layout()
+
+    if output_path is not None:
+        output_path = Path(output_path)
+        output_path.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+        figure.savefig(
+            output_path,
+            dpi=300,
+            bbox_inches="tight",
+        )
+
+    if show:
+        plt.show()
+    else:
+        plt.close(figure)
+
+
 
 
 """
@@ -528,7 +618,7 @@ if __name__ == "__main__":
     for record in records:
         assert record["upper_minus_exact"] >= -tolerance
 
-    plot_weight_ratios(
+    plot_relative_error_components(
         records=records,
         T=T,
         xi=xi,
