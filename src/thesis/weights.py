@@ -678,6 +678,104 @@ def compute_normalized_partial_sums(
 
 
 
+
+
+def compute_partial_sums_varying_n(
+    zeros,
+    n_values,
+    xi,
+    height_factor=RF("1.1"),
+):
+    """
+    Compute normalized CH partial sums as N varies, with
+
+        T_N = height_factor * gamma_N.
+
+    Parameters
+    ----------
+    zeros : list
+        Ordered list of zeros rho_n = 1/2 + i*gamma_n.
+    n_values : iterable[int]
+        Numbers of zeros to include.
+    xi :
+        CH parameter in [-1, 1].
+    height_factor :
+        Factor c > 1 in T_N = c*gamma_N.
+
+    Returns
+    -------
+    list[dict]
+        One record for each value of N.
+    """
+    if not zeros:
+        raise ValueError("zeros must be nonempty")
+
+    xi = RF(xi)
+    height_factor = RF(height_factor)
+
+    if not (-1 <= xi <= 1):
+        raise ValueError("xi must lie in [-1, 1]")
+
+    if height_factor <= 1:
+        raise ValueError("height_factor must be greater than 1")
+
+    records = []
+
+    for n in n_values:
+        if n <= 0:
+            raise ValueError("Each N must be positive")
+
+        if n > len(zeros):
+            raise ValueError(
+                f"N={n} exceeds the number of loaded zeros "
+                f"({len(zeros)})."
+            )
+
+        selected_zeros = zeros[:n]
+        gamma_n = RF(selected_zeros[-1].imag())
+        T = height_factor * gamma_n
+
+        exact_weight = ch_weight_T_xi(T, xi)
+        simplified_weight = ch_simplified_weight_T_xi(T, xi)
+        upper_weight = ch_131_upper_bound_T_xi(T, xi)
+
+        exact_sum = RF(0)
+        simplified_sum = RF(0)
+        upper_sum = RF(0)
+
+        for rho in selected_zeros:
+            exact_sum += exact_weight(rho)
+            simplified_sum += simplified_weight(rho)
+            upper_sum += upper_weight(rho)
+
+        normalization = 2 * PI_NUM / T
+
+        normalized_exact = normalization * exact_sum
+        normalized_simplified = normalization * simplified_sum
+        normalized_upper = normalization * upper_sum
+
+        records.append(
+            {
+                "n": n,
+                "gamma_n": gamma_n,
+                "T": T,
+                "exact": normalized_exact,
+                "simplified": normalized_simplified,
+                "upper_131": normalized_upper,
+                "simp_relative_error": (
+                    normalized_simplified - normalized_exact
+                ) / normalized_exact,
+                "upper_relative_gap": (
+                    normalized_upper - normalized_exact
+                ) / normalized_exact,
+            }
+        )
+
+    return records
+
+
+
+
 """
 PARTIAL SUM PLOTTING
 """
@@ -857,6 +955,129 @@ def plot_normalized_sum_relative_gaps(
         plt.close(figure)
 
 
+def plot_partial_sums_varying_n(
+    records,
+    xi,
+    height_factor=RF("1.1"),
+    output_path=None,
+    show=True,
+    log_n_axis=True,
+):
+    """
+    Plot normalized exact, simplified, and equation (131)
+    partial sums as N varies, with
+
+        T_N = height_factor * gamma_N.
+
+    Parameters
+    ----------
+    records : list[dict]
+        Output from compute_partial_sums_varying_n.
+    xi :
+        CH parameter used in the computation.
+    height_factor :
+        Factor c in T_N = c*gamma_N.
+    output_path : str or Path, optional
+        Path at which to save the figure.
+    show : bool
+        Whether to display the figure.
+    log_n_axis : bool
+        Whether to use a logarithmic horizontal axis.
+    """
+    if not records:
+        raise ValueError("records must be nonempty")
+
+    xi = RF(xi)
+    height_factor = RF(height_factor)
+
+    n_values = [
+        int(record["n"])
+        for record in records
+    ]
+    exact_values = [
+        float(record["exact"])
+        for record in records
+    ]
+    simplified_values = [
+        float(record["simplified"])
+        for record in records
+    ]
+    upper_values = [
+        float(record["upper_131"])
+        for record in records
+    ]
+
+    figure, axis = plt.subplots(figsize=(10, 6))
+
+    axis.plot(
+        n_values,
+        exact_values,
+        marker="o",
+        linewidth=1.5,
+        label=r"$\mathcal{Z}_N^{\mathrm{exact}}$",
+    )
+    axis.plot(
+        n_values,
+        simplified_values,
+        marker="o",
+        linewidth=1.5,
+        label=r"$\mathcal{Z}_N^{\mathrm{simp}}$",
+    )
+    axis.plot(
+        n_values,
+        upper_values,
+        marker="o",
+        linewidth=1.5,
+        label=r"$\mathcal{Z}_N^{131}$",
+    )
+
+    if log_n_axis:
+        axis.set_xscale("log")
+
+    axis.set_xlabel(r"Number of included zeros $N$")
+    axis.set_ylabel(
+        r"Normalized partial sum "
+        r"$\frac{2\pi}{T_N}\sum_{n=1}^{N}W(\gamma_n)$"
+    )
+    axis.set_title(
+        "Normalized CH partial sums as $N$ varies\n"
+        rf"$T_N={float(height_factor):g}\gamma_N$, "
+        rf"$\xi={float(xi):g}$"
+    )
+
+    axis.grid(True, alpha=0.3)
+    axis.legend()
+    figure.tight_layout()
+
+    if output_path is not None:
+        output_path = Path(output_path)
+        output_path.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+        figure.savefig(
+            output_path,
+            dpi=300,
+            bbox_inches="tight",
+        )
+        print(f"Saved plot to {output_path}")
+
+    if show:
+        plt.show()
+    else:
+        plt.close(figure)
+
+
+
+
+
+
+
+
+
+
+
+
 
 def reciprocal_square_limit(zeros):
     """
@@ -874,7 +1095,7 @@ def reciprocal_square_limit(zeros):
 
 
 
-
+"""
 n = 1000
 xi = RF(1)
 
@@ -944,6 +1165,7 @@ print(
     f"Predicted relative gap: "
     f"{predicted_relative_gap}"
 )
+"""
 
 
 def simplified_exact_limit_gap(zeros):
@@ -973,6 +1195,7 @@ def upper_exact_limit_gap(zeros):
     )
 
 
+"""
 reciprocal_gap = reciprocal_square_limit(zeros)
 main_weight_gap = simplified_exact_limit_gap(zeros)
 predicted_total_gap = upper_exact_limit_gap(zeros)
@@ -997,7 +1220,7 @@ predicted_relative_gap = (
 
 print(f"Observed relative gap:     {last_record['upper_relative_gap']}")
 print(f"Predicted relative gap:    {predicted_relative_gap}")
-
+"""
 
 
 
@@ -1065,4 +1288,54 @@ if __name__ == "__main__":
 
 
 
+
+
+n_values = [
+    100,
+    200,
+    500,
+    1000,
+    2000,
+    5000,
+    10000,
+    20000,
+]
+
+xi = RF(1)
+height_factor = RF("1.1")
+
+zeros_varying_n = load_rh_zeros(max(n_values))
+
+records_varying_n = compute_partial_sums_varying_n(
+    zeros=zeros_varying_n,
+    n_values=n_values,
+    xi=xi,
+    height_factor=height_factor,
+)
+
+plot_partial_sums_varying_n(
+    records=records_varying_n,
+    xi=xi,
+    height_factor=height_factor,
+    output_path=(
+        "output/ch_normalized_partial_sums_varying_n.png"
+    ),
+    show=True,
+)
+
+print(
+    "\n"
+    "NORMALIZED PARTIAL SUMS WITH N VARYING\n"
+    "--------------------------------------"
+)
+
+for record in records_varying_n:
+    print(
+        f"N={record['n']:>6d}  "
+        f"gamma_N={float(record['gamma_n']):>12.6g}  "
+        f"T={float(record['T']):>12.6g}  "
+        f"exact={float(record['exact']):>12.8g}  "
+        f"simp={float(record['simplified']):>12.8g}  "
+        f"upper={float(record['upper_131']):>12.8g}"
+    )
 
