@@ -3,6 +3,8 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 
+import csv
+
 from sage.all import (
     ComplexField,
     RealField,
@@ -904,8 +906,8 @@ def plot_normalized_sum_relative_gaps(
         simp_gaps,
         marker="o",
         label=(
-            r"$(Z_N^{\mathrm{simp}}-"
-            r"Z_N^{\mathrm{exact}})/Z_N^{\mathrm{exact}}$"
+            r"$(Z_N^{\mathrm{simp}}(T) -"
+            r"Z_N^{\mathrm{exact}}(T))/Z_N^{\mathrm{exact}}(T)$"
         ),
     )
     axis.plot(
@@ -913,8 +915,8 @@ def plot_normalized_sum_relative_gaps(
         upper_gaps,
         marker="o",
         label=(
-            r"$(Z_N^{131}-"
-            r"Z_N^{\mathrm{exact}})/Z_N^{\mathrm{exact}}$"
+            r"$(Z_N^{131}(T)-"
+            r"Z_N^{\mathrm{exact}}(T))/Z_N^{\mathrm{exact}}(T)$"
         ),
     )
 
@@ -1322,6 +1324,60 @@ print(f"Predicted relative gap:    {predicted_relative_gap}")
 
 
 
+
+
+
+# Normalized partial sums, fixed N and T varying
+n = 20000
+zeros = load_rh_zeros(20000)
+gamma_max = RF(zeros[-1].imag())
+xi = RF(1)
+
+scale_factors = [
+    RF("1.01"),
+    RF("1.1"),
+    RF(2),
+    RF(10),
+    RF(100),
+    RF(10**4),
+    RF(10**8),
+]
+
+T_values = [
+    factor * gamma_max
+    for factor in scale_factors
+]
+
+records = compute_normalized_partial_sums(zeros, T_values, xi)
+
+# plot
+plot_normalized_partial_sums(
+    records=records,
+    n=n,
+    xi=xi,
+    output_path="output/ch_normalized_partial_sums.png",
+    show=True,
+)
+
+
+plot_normalized_sum_relative_gaps(
+    records=records,
+    n=n,
+    xi=xi,
+    output_path="output/ch_normalized_partial_sum_gaps.png",
+    show=True,
+)
+
+# output data to CSV to load to tex
+headers = records[0].keys()
+with open("output/partial_sums_varying_T.csv", mode="w", newline="", encoding="utf-8") as file:
+    writer = csv.DictWriter(file, fieldnames=headers)
+    writer.writeheader()
+    writer.writerows(records)
+
+
+
+
 """
 plot_normalized_partial_sums(
     records=records,
@@ -1387,7 +1443,7 @@ if __name__ == "__main__":
 
 
 
-
+"""
 n_values = [
     100,
     200,
@@ -1449,4 +1505,5 @@ plot_partial_sum_gaps_varying_n(
     ),
     show=True,
 )
+"""
 
