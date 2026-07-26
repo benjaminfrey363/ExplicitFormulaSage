@@ -1014,21 +1014,21 @@ def plot_partial_sums_varying_n(
         exact_values,
         marker="o",
         linewidth=1.5,
-        label=r"$\mathcal{Z}_N^{\mathrm{exact}}$",
+        label=r"$Z_N^{\mathrm{exact}}(T)$",
     )
     axis.plot(
         n_values,
         simplified_values,
         marker="o",
         linewidth=1.5,
-        label=r"$\mathcal{Z}_N^{\mathrm{simp}}$",
+        label=r"$Z_N^{\mathrm{simp}}(T)$",
     )
     axis.plot(
         n_values,
         upper_values,
         marker="o",
         linewidth=1.5,
-        label=r"$\mathcal{Z}_N^{131}$",
+        label=r"$Z_N^{\mathrm{131}}(T)$",
     )
 
     if log_n_axis:
@@ -1067,6 +1067,104 @@ def plot_partial_sums_varying_n(
     else:
         plt.close(figure)
 
+
+
+
+def plot_partial_sum_gaps_varying_n(
+    records,
+    xi,
+    height_factor=RF("1.1"),
+    output_path=None,
+    show=True,
+    log_n_axis=True,
+):
+    """
+    Plot relative differences of the simplified and equation
+    (131) normalized partial sums from the exact partial sum,
+    as N varies with T_N = height_factor * gamma_N.
+    """
+    if not records:
+        raise ValueError("records must be nonempty")
+
+    xi = RF(xi)
+    height_factor = RF(height_factor)
+
+    n_values = [
+        int(record["n"])
+        for record in records
+    ]
+    simplified_gaps = [
+        float(record["simp_relative_error"])
+        for record in records
+    ]
+    upper_gaps = [
+        float(record["upper_relative_gap"])
+        for record in records
+    ]
+
+    figure, axis = plt.subplots(figsize=(10, 6))
+
+    axis.plot(
+        n_values,
+        simplified_gaps,
+        marker="o",
+        linewidth=1.5,
+        label=(
+            r"$(Z_N^{\mathrm{simp}}(T)"
+            r"- Z_N^{\mathrm{exact}})(T)"
+            r"/ Z_N^{\mathrm{exact}}(T)$"
+        ),
+    )
+    axis.plot(
+        n_values,
+        upper_gaps,
+        marker="o",
+        linewidth=1.5,
+        label=(
+            r"$(Z_N^{131}(T)"
+            r"- Z_N^{\mathrm{exact}}))(T)"
+            r"/ Z_N^{\mathrm{exact}}(T)$"
+        ),
+    )
+
+    axis.axhline(
+        0,
+        linewidth=1,
+        linestyle="--",
+    )
+
+    if log_n_axis:
+        axis.set_xscale("log")
+
+    axis.set_xlabel(r"Number of included zeros $N$")
+    axis.set_ylabel("Relative difference")
+    axis.set_title(
+        "Relative gaps in normalized CH partial sums as $N$ varies\n"
+        rf"$T_N={float(height_factor):g}\gamma_N$, "
+        rf"$\xi={float(xi):g}$"
+    )
+
+    axis.grid(True, alpha=0.3)
+    axis.legend()
+    figure.tight_layout()
+
+    if output_path is not None:
+        output_path = Path(output_path)
+        output_path.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+        figure.savefig(
+            output_path,
+            dpi=300,
+            bbox_inches="tight",
+        )
+        print(f"Saved plot to {output_path}")
+
+    if show:
+        plt.show()
+    else:
+        plt.close(figure)
 
 
 
@@ -1338,4 +1436,17 @@ for record in records_varying_n:
         f"simp={float(record['simplified']):>12.8g}  "
         f"upper={float(record['upper_131']):>12.8g}"
     )
+
+
+
+plot_partial_sum_gaps_varying_n(
+    records=records_varying_n,
+    xi=xi,
+    height_factor=height_factor,
+    output_path=(
+        "output/"
+        "ch_normalized_partial_sum_gaps_varying_n.png"
+    ),
+    show=True,
+)
 
